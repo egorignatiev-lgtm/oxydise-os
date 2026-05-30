@@ -1,0 +1,1809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oxydise — Customer Operating System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFFFFF; --panel:#FBFBFD; --surface:#F5F5F7; --line:#E5E5EA;
+  --ink:#1D1D1F; --muted:#6E6E73; --primary:#00AAFF; --navy:#001540;
+  --primary-soft:rgba(0,170,255,.10); --navy-soft:rgba(0,21,64,.05);
+  --shadow:0 1px 2px rgba(0,21,64,.04),0 8px 24px rgba(0,21,64,.06);
+  --display:"Urbanist",-apple-system,BlinkMacSystemFont,"SF Pro Display",system-ui,sans-serif;
+  --body:"Manrope",-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+  --sidebar-w:300px;
+}
+[data-theme="dark"]{
+  --bg:#0B0B0D; --panel:#151518; --surface:#1D1D1F; --line:#2C2C2E;
+  --ink:#F5F5F7; --muted:#98989D; --primary:#00AAFF; --navy:#001540;
+  --primary-soft:rgba(0,170,255,.14); --navy-soft:rgba(255,255,255,.04);
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 28px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--body);background:var(--bg);color:var(--ink);
+  font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;
+  font-feature-settings:"ss01";letter-spacing:-.005em;
+}
+a{color:inherit;text-decoration:none}
+::selection{background:var(--primary-soft);color:var(--ink)}
+
+/* ---------- Sidebar ---------- */
+.sidebar{
+  position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;
+  background:var(--panel);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;z-index:40;overflow-y:auto;
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+}
+.brand{padding:28px 26px 22px;display:flex;align-items:center;justify-content:space-between}
+.brand .wordmark{font-family:var(--display);font-weight:700;font-size:21px;letter-spacing:.16em;color:var(--ink)}
+.brand .wordmark b{color:var(--primary);font-weight:700}
+.theme-btn{
+  width:34px;height:34px;border-radius:9px;border:1px solid var(--line);
+  background:var(--bg);color:var(--muted);cursor:pointer;display:grid;place-items:center;
+  transition:.2s;font-size:15px;
+}
+.theme-btn:hover{color:var(--ink);border-color:var(--primary)}
+.nav-scroll{flex:1;padding:6px 16px 30px}
+.nav-group{margin-top:22px}
+.nav-group:first-child{margin-top:6px}
+.nav-label{
+  font-family:var(--body);font-size:11px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.13em;color:var(--muted);padding:0 12px 8px;display:block;
+}
+.nav-link{
+  display:flex;align-items:center;gap:11px;padding:8px 12px;border-radius:9px;
+  color:var(--muted);font-size:14px;font-weight:500;cursor:pointer;
+  transition:.15s;line-height:1.3;position:relative;
+}
+.nav-link .nx{font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted);min-width:18px;font-weight:600;opacity:.7}
+.nav-link:hover{background:var(--surface);color:var(--ink)}
+.nav-link.active{background:var(--primary-soft);color:var(--ink)}
+.nav-link.active .nx{color:var(--primary);opacity:1}
+.nav-link.dim{opacity:.38}
+.nav-link .dot{position:absolute;right:12px;width:6px;height:6px;border-radius:50%;background:var(--primary);opacity:0;transition:.15s}
+.nav-link.has-role .dot{opacity:1}
+
+/* ---------- Main ---------- */
+.main{margin-left:var(--sidebar-w);min-height:100vh}
+.topbar{
+  position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 82%,transparent);
+  backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px);
+  border-bottom:1px solid var(--line);
+}
+.topbar-inner{max-width:1080px;margin:0 auto;padding:13px 56px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.viewing{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.filters{display:flex;gap:7px;flex-wrap:wrap}
+.chip{
+  font-family:var(--body);font-size:12.5px;font-weight:600;padding:6px 13px;border-radius:999px;
+  border:1px solid var(--line);background:var(--bg);color:var(--muted);cursor:pointer;transition:.15s;letter-spacing:.01em;
+}
+.chip:hover{color:var(--ink);border-color:var(--muted)}
+.chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+[data-theme="dark"] .chip.on{background:var(--primary);color:var(--navy);border-color:var(--primary)}
+.menu-toggle{display:none}
+
+.content{max-width:1080px;margin:0 auto;padding:60px 56px 120px}
+
+/* ---------- Page header ---------- */
+.eyebrow{font-size:12.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--primary);margin-bottom:18px}
+h1.page-title{font-family:var(--display);font-weight:600;font-size:clamp(2.1rem,5vw,3.5rem);line-height:1.04;letter-spacing:-.02em;color:var(--ink);max-width:18ch}
+.lead{font-size:1.0625rem;line-height:1.55;color:var(--muted);margin-top:22px;max-width:62ch}
+.page-head{padding-bottom:34px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+
+/* ---------- Sections / blocks ---------- */
+.section{margin-top:46px}
+.section > h2{
+  font-family:var(--display);font-weight:600;font-size:1.4rem;letter-spacing:-.01em;color:var(--ink);
+  display:flex;align-items:center;gap:12px;margin-bottom:6px;
+}
+.section > h2 .ico{color:var(--primary)}
+.section .sub{color:var(--muted);font-size:.95rem;margin-bottom:18px;max-width:64ch}
+
+.promise{
+  background:linear-gradient(180deg,var(--primary-soft),transparent);
+  border:1px solid var(--line);border-radius:16px;padding:24px 26px;margin-top:34px;
+  position:relative;overflow:hidden;
+}
+.promise:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--primary)}
+.promise .k{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--primary);margin-bottom:9px}
+.promise p{font-size:1.02rem;line-height:1.6;color:var(--ink)}
+.promise p + p{margin-top:12px;color:var(--muted);font-size:.96rem}
+
+/* tables */
+.tbl{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;font-size:14px;background:var(--bg)}
+.tbl th{
+  text-align:left;font-family:var(--body);font-weight:600;font-size:11.5px;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--muted);background:var(--surface);padding:11px 16px;border-bottom:1px solid var(--line);
+}
+.tbl td{padding:12px 16px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.5;color:var(--ink)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--panel)}
+.tbl td .owner-tag{display:inline-block}
+.role-pill{
+  display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:7px;
+  background:var(--navy-soft);color:var(--ink);letter-spacing:.01em;white-space:nowrap;
+}
+tr.role-hit td{background:var(--primary-soft)!important}
+tr.role-hit td:first-child{box-shadow:inset 3px 0 0 var(--primary)}
+.row-dim{opacity:.32;transition:.2s}
+
+/* card grids */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.card{
+  background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:18px 19px;transition:.18s;
+}
+.card:hover{border-color:var(--primary);box-shadow:var(--shadow);transform:translateY(-2px)}
+.card .ct{font-family:var(--display);font-weight:600;font-size:15px;color:var(--ink);margin-bottom:6px}
+.card .cd{font-size:13.5px;color:var(--muted);line-height:1.5}
+.card.role-hit{border-color:var(--primary);background:var(--primary-soft)}
+
+/* simple lists */
+ul.clean{list-style:none;display:flex;flex-direction:column;gap:9px;margin-top:6px}
+ul.clean li{padding-left:22px;position:relative;color:var(--ink);font-size:14.5px;line-height:1.5}
+ul.clean li:before{content:"";position:absolute;left:0;top:9px;width:7px;height:7px;border-radius:2px;background:var(--primary)}
+ul.tmpl{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;margin-top:6px}
+ul.tmpl li{padding:11px 14px;background:var(--surface);border-radius:10px;font-size:13.5px;color:var(--ink);border:1px solid transparent;transition:.15s}
+ul.tmpl li:hover{border-color:var(--line);background:var(--panel)}
+
+.rule-row{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+.rule-row:last-child{border-bottom:none}
+.rule-row .rk{font-family:var(--display);font-weight:600;font-size:14.5px;color:var(--ink);min-width:230px;flex-shrink:0}
+.rule-row .rv{color:var(--muted);font-size:14px;line-height:1.5}
+
+.callout{border:1px solid var(--line);border-left:3px solid var(--navy);background:var(--panel);border-radius:12px;padding:16px 19px;margin-top:18px}
+.callout .ck{font-size:11.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--navy);margin-bottom:7px}
+[data-theme="dark"] .callout{border-left-color:var(--primary)}
+[data-theme="dark"] .callout .ck{color:var(--primary)}
+.callout p{font-size:14.5px;color:var(--ink);line-height:1.58}
+.callout.warn{border-left-color:var(--primary)}
+.callout.script{background:var(--surface)}
+.callout.script p{font-style:italic;color:var(--ink)}
+
+.feedback-q{display:flex;gap:11px;padding:9px 0;color:var(--muted);font-size:14px;align-items:flex-start}
+.feedback-q:before{content:"?";font-family:var(--display);font-weight:700;color:var(--primary);background:var(--primary-soft);width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-size:12px;flex-shrink:0;margin-top:1px}
+
+/* home hero metrics */
+.home-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:6px}
+.metric{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:22px}
+.metric .mn{font-family:var(--display);font-weight:700;font-size:2rem;color:var(--primary);letter-spacing:-.02em}
+.metric .ml{font-size:13px;color:var(--muted);margin-top:4px}
+.role-banner{display:none;align-items:center;gap:12px;background:var(--primary-soft);border:1px solid var(--primary);border-radius:12px;padding:13px 18px;margin-top:24px;font-size:14px}
+.role-banner.show{display:flex}
+.role-banner b{color:var(--ink)}
+.role-banner .clear{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--primary);cursor:pointer;border:none;background:none}
+
+.search{
+  width:100%;padding:13px 16px;border:1px solid var(--line);border-radius:12px;background:var(--bg);
+  color:var(--ink);font-family:var(--body);font-size:14.5px;margin-bottom:18px;transition:.15s;
+}
+.search:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 4px var(--primary-soft)}
+
+/* feedback widget */
+.fb-form{margin-top:18px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
+.fb-form .fb-text{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14.5px;line-height:1.5;resize:vertical;min-height:64px;transition:.15s}
+.fb-form .fb-text:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 4px var(--primary-soft)}
+.fb-row{display:flex;gap:10px;margin-top:10px;align-items:center;flex-wrap:wrap}
+.fb-row .fb-name{flex:1;min-width:180px;padding:10px 13px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;transition:.15s}
+.fb-row .fb-name:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 4px var(--primary-soft)}
+.fb-submit{padding:10px 20px;border-radius:10px;border:1px solid var(--primary);background:var(--primary);color:#fff;font-family:var(--display);font-weight:600;font-size:14px;cursor:pointer;transition:.15s;white-space:nowrap}
+.fb-submit:hover{filter:brightness(1.06);transform:translateY(-1px)}
+[data-theme="dark"] .fb-submit{color:var(--navy)}
+.fb-msg{margin-top:12px;font-size:13.5px;color:var(--primary);font-weight:500;background:var(--primary-soft);border-radius:9px;padding:9px 13px}
+.fb-list{margin-top:16px;display:flex;flex-direction:column;gap:10px}
+.fb-list-h{font-size:11.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+.fb-item{position:relative;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:13px 15px}
+.fb-item-top{display:flex;gap:10px;align-items:baseline;margin-bottom:5px}
+.fb-who{font-family:var(--display);font-weight:600;font-size:13.5px;color:var(--ink)}
+.fb-when{font-size:12px;color:var(--muted)}
+.fb-pin{font-size:11px;color:var(--primary);font-weight:600;margin-left:auto}
+.fb-body{font-size:14px;color:var(--ink);line-height:1.55;white-space:pre-wrap;padding-right:62px}
+.fb-del{position:absolute;top:11px;right:12px;font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;font-weight:500}
+.fb-del:hover{color:var(--primary)}
+.fb-toolbar{display:flex;gap:9px;flex-wrap:wrap;margin:18px 0 6px}
+.fb-tb{padding:9px 15px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-family:var(--body);font-weight:500;font-size:13px;cursor:pointer;transition:.15s}
+.fb-tb:hover{border-color:var(--primary);color:var(--primary)}
+.fb-tb.danger:hover{border-color:#e0533d;color:#e0533d}
+.fb-note{font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.5}
+.fb-group{margin-top:20px}
+.fb-group-h{font-family:var(--display);font-weight:600;font-size:15px;color:var(--ink);margin-bottom:10px;display:flex;align-items:center;gap:9px}
+.fb-badge{font-size:11px;font-weight:700;color:var(--primary);background:var(--primary-soft);border-radius:20px;padding:2px 9px}
+.fb-count-wrap{font-family:var(--body);font-weight:400;font-size:.95rem;color:var(--muted)}
+.fb-empty{font-size:14px;color:var(--muted);line-height:1.6;margin-top:8px}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);background:var(--navy);color:#fff;padding:11px 20px;border-radius:11px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:200;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+[data-theme="dark"] .toast{background:var(--primary);color:var(--navy)}
+
+/* edit button + mode */
+.edit-btn{margin-left:auto;padding:7px 16px;border-radius:20px;border:1px solid var(--line);background:var(--bg);color:var(--muted);font-family:var(--body);font-weight:600;font-size:13px;cursor:pointer;transition:.15s;flex-shrink:0}
+.edit-btn:hover{color:var(--ink);border-color:var(--primary)}
+.edit-btn.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+[data-theme="dark"] .edit-btn.on{color:var(--navy)}
+.sync-dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex-shrink:0;margin-left:6px;transition:.2s}
+.sync-dot.ok{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.18)}
+.sync-dot.err{background:#e0533d;box-shadow:0 0 0 3px rgba(224,83,61,.18)}
+.sync-dot[hidden]{display:none}
+.editable{border-radius:4px;transition:background .12s, box-shadow .12s}
+body.editing .editable{box-shadow:0 0 0 1px var(--line);cursor:text}
+body.editing .editable:hover{background:var(--primary-soft)}
+body.editing .editable:focus{outline:none;box-shadow:0 0 0 2px var(--primary);background:var(--primary-soft)}
+body.editing .ed-h2{display:inline-block;min-width:30px}
+body.editing{padding-bottom:60px}
+#editbar{position:fixed;left:0;right:0;bottom:0;display:flex;align-items:center;gap:13px;padding:11px 20px;background:var(--navy);color:#fff;z-index:300;box-shadow:0 -6px 24px rgba(0,0,0,.2);font-size:13.5px;flex-wrap:wrap}
+#editbar[hidden]{display:none}
+[data-theme="dark"] #editbar{background:#000;border-top:1px solid var(--line)}
+.eb-tag{font-family:var(--display);font-weight:700;letter-spacing:.04em}
+.eb-hint{color:rgba(255,255,255,.7);font-size:12.5px}
+.eb-spacer{flex:1}
+.eb-btn{padding:7px 14px;border-radius:9px;border:1px solid rgba(255,255,255,.25);background:transparent;color:#fff;font-family:var(--body);font-weight:600;font-size:12.5px;cursor:pointer;transition:.15s}
+.eb-btn:hover{background:rgba(255,255,255,.12)}
+.eb-btn.primary{background:var(--primary);border-color:var(--primary)}
+.eb-btn.primary:hover{filter:brightness(1.08)}
+.eb-btn.danger:hover{background:rgba(224,83,61,.85);border-color:transparent}
+
+/* template register: notes + documents */
+.reg-tbl td.reg-note-cell{width:46px;text-align:center;padding:8px}
+.reg-toggle{position:relative;width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--muted);cursor:pointer;font-size:15px;line-height:1;transition:.15s;display:inline-flex;align-items:center;justify-content:center}
+.reg-toggle:hover{border-color:var(--primary);color:var(--primary)}
+.reg-toggle.has-notes{border-color:var(--primary);color:var(--primary);background:var(--primary-soft)}
+.reg-badge{position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;padding:0 4px;border-radius:9px;background:var(--primary);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.reg-badge[hidden]{display:none}
+[data-theme="dark"] .reg-badge{color:var(--navy)}
+.reg-detail > td{background:var(--surface);padding:0!important;border-bottom:1px solid var(--line)}
+.reg-panel{padding:16px 18px}
+.rp-label{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:4px 0 7px}
+.rp-notes{width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.5;resize:vertical;transition:.15s}
+.rp-notes:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+.rp-docs{margin-bottom:12px}
+.rp-doc{display:flex;align-items:center;gap:10px;padding:8px 11px;background:var(--bg);border:1px solid var(--line);border-radius:9px;margin-bottom:7px;font-size:13.5px}
+.rp-doc a{flex:1;word-break:break-all}
+.rp-doc-del{font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;font-weight:500;flex-shrink:0}
+.rp-doc-del:hover{color:var(--primary)}
+.rp-empty{font-size:13px;color:var(--muted);padding:4px 0 8px}
+.rp-add{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rp-add .rp-doc-label{flex:1;min-width:120px;max-width:200px}
+.rp-add .rp-doc-url{flex:2;min-width:200px}
+.rp-add input{padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:13.5px;transition:.15s}
+.rp-add input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+.rp-add-btn{padding:9px 16px;border-radius:9px;border:1px solid var(--primary);background:var(--primary);color:#fff;font-family:var(--display);font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap;transition:.15s}
+.rp-add-btn:hover{filter:brightness(1.06)}
+[data-theme="dark"] .rp-add-btn{color:var(--navy)}
+.rp-help{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5}
+
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;letter-spacing:.03em}
+.tag.p1{background:rgba(0,170,255,.16);color:#0077b3}.tag.p2{background:var(--surface);color:var(--muted)}.tag.p3{background:var(--surface);color:var(--muted)}
+[data-theme="dark"] .tag.p1{color:#5cc8ff}
+.ext{color:var(--primary);font-weight:600}
+.ext:hover{text-decoration:underline}
+
+.foot{margin-top:80px;padding-top:26px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px;line-height:1.7}
+
+@media(max-width:980px){
+  :root{--sidebar-w:270px}
+  .content,.topbar-inner{padding-left:30px;padding-right:30px}
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}
+  .menu-toggle{display:grid;place-items:center;width:36px;height:36px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;font-size:17px}
+  .scrim{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:35}
+  .scrim.show{display:block}
+  .rule-row{flex-direction:column;gap:4px}.rule-row .rk{min-width:0}
+}
+.fade{animation:fade .4s ease both}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<aside class="sidebar" id="sidebar">
+  <div class="brand">
+    <div class="wordmark" onclick="go('home')" style="cursor:pointer">OXY<b>D</b>ISE</div>
+    <button class="theme-btn" id="themeBtn" title="Toggle theme">◐</button>
+  </div>
+  <nav class="nav-scroll" id="nav"></nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-inner">
+      <button class="menu-toggle" id="menuToggle">☰</button>
+      <span class="viewing">Viewing as</span>
+      <div class="filters" id="filters"></div>
+      <span class="sync-dot" id="syncDot" hidden></span>
+      <button class="edit-btn" id="editBtn" title="Edit site text">Edit</button>
+    </div>
+  </div>
+  <main class="content" id="content"></main>
+</div>
+
+<div id="editbar" hidden>
+  <span class="eb-tag">Editing mode</span>
+  <span class="eb-hint">Click any text on the page to change it. Changes save automatically.</span>
+  <span class="eb-spacer"></span>
+  <button class="eb-btn" type="button" data-import>Import</button>
+  <button class="eb-btn" type="button" data-export>Export</button>
+  <button class="eb-btn danger" type="button" data-discard>Discard local</button>
+  <button class="eb-btn primary" type="button" data-publish>Publish updated site</button>
+  <button class="eb-btn" type="button" data-done>Done</button>
+  <input id="importFile" type="file" accept="application/json,.json" hidden>
+</div>
+
+<script>
+/*BAKED_START*/var BAKED={};/*BAKED_END*/
+/* ===== Editing config =====
+   To change the edit-mode passcode, edit the value below (keep the quotes).
+   Note: this is a light gate for an internal tool, not strong security. */
+var EDIT_PASS="oxydise";
+
+/* ============================================================
+   SHARED BACKEND (optional) — makes edits, template notes and
+   feedback save live for everyone, with no download/republish.
+
+   Leave url + key blank to run purely locally (default).
+   To switch the shared backend on (one-time, ~5 min):
+   1. Create a free project at https://supabase.com
+   2. In the project: SQL Editor -> New query -> paste & run:
+
+        create table if not exists oxydise_kv (
+          key text primary key,
+          value jsonb,
+          updated_at timestamptz default now()
+        );
+        alter table oxydise_kv enable row level security;
+        create policy "read"   on oxydise_kv for select using (true);
+        create policy "insert" on oxydise_kv for insert with check (true);
+        create policy "update" on oxydise_kv for update using (true);
+
+   3. Project Settings -> API: copy the "Project URL" and the
+      "anon public" key (this key is safe to put in a web page).
+   4. Paste both below, save the file, re-upload it to your host.
+
+   Note: with the policies above anyone with the page can write,
+   gated only by the edit passcode. For true write protection,
+   enable Supabase Auth — that can be wired in as a next step.
+   ============================================================ */
+var BACKEND = { url:"", key:"", table:"oxydise_kv" };
+
+const Net = {
+  get enabled(){ return !!(BACKEND.url && BACKEND.key); },
+  base(){ return BACKEND.url.replace(/\/+$/,"")+"/rest/v1/"+BACKEND.table; },
+  hdr(extra){ return Object.assign({ apikey:BACKEND.key, Authorization:"Bearer "+BACKEND.key, "Content-Type":"application/json" }, extra||{}); },
+  async getAll(){
+    const r=await fetch(this.base()+"?select=key,value",{headers:this.hdr(),cache:"no-store"});
+    if(!r.ok) throw new Error("read "+r.status);
+    const rows=await r.json(); const m={}; rows.forEach(x=>m[x.key]=x.value); return m;
+  },
+  async set(key,value){
+    const r=await fetch(this.base(),{method:"POST",headers:this.hdr({Prefer:"resolution=merge-duplicates,return=minimal"}),body:JSON.stringify({key,value,updated_at:new Date().toISOString()})});
+    if(!r.ok) throw new Error("write "+r.status);
+  }
+};
+let NET_OK=false;
+function setSyncDot(state){ const d=document.getElementById("syncDot"); if(!d) return; d.hidden=!Net.enabled; d.className="sync-dot "+(state||""); d.title = state==="ok"?"Live \u2014 synced to the shared server":(state==="err"?"Offline \u2014 changes saved on this device only":"Connecting\u2026"); }
+async function backendHydrate(){
+  if(!Net.enabled) return false;
+  try{
+    const m=await Net.getAll();
+    if(m.overrides!=null) Store.set(OVR_KEY, JSON.stringify(m.overrides));
+    if(m.tmpl!=null) Store.set(TMPL_KEY, JSON.stringify(m.tmpl));
+    if(m.feedback!=null) Store.set(FB_KEY, JSON.stringify(m.feedback));
+    ovrLoad(); tmplLoad();
+    NET_OK=true; setSyncDot("ok"); return true;
+  }catch(e){ NET_OK=false; setSyncDot("err"); console.warn("sync read failed",e); return false; }
+}
+function backendPush(which){
+  if(!Net.enabled) return;
+  let key,val;
+  if(which==="overrides"){ key="overrides"; val=OVR; }
+  else if(which==="tmpl"){ key="tmpl"; val=TMPL; }
+  else if(which==="feedback"){ key="feedback"; try{ val=JSON.parse(Store.get(FB_KEY)||"[]"); }catch(e){ val=[]; } }
+  else return;
+  Net.set(key,val).then(()=>{ NET_OK=true; setSyncDot("ok"); }).catch(e=>{ NET_OK=false; setSyncDot("err"); console.warn("sync write failed",e); toast("Couldn't reach the server \u2014 saved on this device."); });
+}
+function backendPoll(){
+  if(!Net.enabled) return;
+  setInterval(async ()=>{
+    const ae=document.activeElement;
+    if(ae && (ae.isContentEditable || (ae.closest && ae.closest(".fb-form, .rp-panel, #editbar")))) return;
+    try{
+      const m=await Net.getAll(); NET_OK=true; setSyncDot("ok");
+      let changed=false;
+      const cmp=(k,store)=>{ if(m[k]==null) return; const nv=JSON.stringify(m[k]); let cv; try{ cv=JSON.stringify(JSON.parse(Store.get(store)||"null")); }catch(e){ cv="null"; } if(nv!==cv){ Store.set(store,nv); changed=true; } };
+      cmp("overrides",OVR_KEY); cmp("tmpl",TMPL_KEY); cmp("feedback",FB_KEY);
+      if(changed){ ovrLoad(); tmplLoad(); render(); }
+    }catch(e){ NET_OK=false; setSyncDot("err"); }
+  }, 12000);
+}
+
+
+/* ============================================================
+   OXYDISE CUSTOMER OPERATING SYSTEM — content model
+   Compiled from: Customer Operating System, Sales Call Bible,
+   Oxydise Education Knowledge Base, Template Library & Brochure Register.
+   ============================================================ */
+
+const ROLES = [
+  {key:"all",      label:"All"},
+  {key:"sales",    label:"Sales"},
+  {key:"olga",     label:"Olga"},
+  {key:"driver",   label:"Driver"},
+  {key:"petro",    label:"Petro / Maintenance"},
+  {key:"egor",     label:"Egor"},
+  {key:"giles",    label:"Giles"},
+  {key:"directors",label:"Directors"}
+];
+
+/* Maps a free-text owner string to role keys for the person filter */
+function ownerRoles(s){
+  s=(s||"").toLowerCase(); const r=[];
+  if(/sales|kris|ricky/.test(s))r.push("sales");
+  if(/olga/.test(s))r.push("olga");
+  if(/driver|paulo/.test(s))r.push("driver");
+  if(/petro|maintenance/.test(s))r.push("petro");
+  if(/egor|ricky|ricard|alan/.test(s))r.push("egor");
+  if(/giles|marketing|videograph/.test(s))r.push("giles");
+  if(/director/.test(s))r.push("directors");
+  return r;
+}
+
+/* What each role should focus on — from the COS person-filter table */
+const ROLE_FOCUS = {
+  sales:"New leads, follow-up calls, qualification, order-form chase, Day 2 check-in, rental-end decision, reviews & referrals, general-enquiry follow-up, relationship issues.",
+  olga:"Invoice, payment, forms, delivery booking, collection booking, accounting, stock admin, payment exceptions.",
+  driver:"Delivery ETA, install, test, setup video, customer training, delivery form, collection, photos, accessory check, stock movement.",
+  petro:"Maintenance tickets, fault severity, photos/videos, repair/replacement, safety concerns, root cause, equipment status.",
+  egor:"Website feedback, education library, content strategy, journey improvements, stock/product issues, special jobs, strategic exceptions.",
+  giles:"Templates, approved wording, brand consistency, email nurture, website content, education content, marketing calendar & performance.",
+  directors:"Discount approvals, payment terms, refunds, serious complaints, free installs, influencer/athlete/special jobs, high-value B2B, product-launch approvals."
+};
+
+const HOME = {
+  eyebrow:"Customer Operating System",
+  title:"How every customer moves through Oxydise.",
+  lead:"This site explains how customers, orders, rentals, stock, maintenance, new products and marketing activity move through Oxydise — who owns each stage, what must happen, which templates to use, what to update in the CRM, and what to do when something does not go to plan. Use the person filter above to see your tasks.",
+  metrics:[
+    {n:"10",l:"Customer-journey stages"},
+    {n:"78",l:"Templates in the register"},
+    {n:"8",l:"Global operating rules"},
+    {n:"1",l:"Source of truth — the CRM"}
+  ],
+  coreRules:[
+    "Every customer has an owner.",
+    "Every customer has a next action.",
+    "Use approved templates.",
+    "Log every exception.",
+    "Keep CRM and stock updated.",
+    "Capture website feedback when customers ask questions we do not answer clearly."
+  ],
+  globalRules:[
+    ["Every customer has an owner","No lead, order, rental, issue or collection should be ownerless."],
+    ["Every customer has a next action","If there is no next-action date, the process is broken."],
+    ["CRM is the source of truth","WhatsApp and email are communication tools, not the official record."],
+    ["Use approved templates","Especially for medical, safety, protocol and product claims."],
+    ["Do not make medical claims","Explain approved information only. Do not diagnose, advise treatment or promise outcomes."],
+    ["Every exception is logged","If something goes wrong, record the owner, action and resolution."],
+    ["Stock must match reality","Equipment cannot move without stock status and equipment ID being updated."],
+    ["Customer feedback improves the website","Questions from calls, delivery and support should become better FAQs, emails, videos, templates or sales scripts."]
+  ],
+  layoutQs:[
+    ["Customer promise","What should the customer feel, understand or receive at this stage?"],
+    ["Owner","Who owns this stage, who supports it, and who approves exceptions?"],
+    ["Must do","What are the non-negotiable actions?"],
+    ["Best practice","What does good look like when done properly?"],
+    ["If it goes wrong","What are the common exceptions and the fix?"],
+    ["CRM / stock update","What must be logged?"],
+    ["Templates","Which email, WhatsApp, script, form, brochure or checklist should be used?"],
+    ["Related education","What does the team need to know to do this properly?"],
+    ["Website feedback","What did the customer ask that the website does not answer clearly?"]
+  ],
+  principle:["What should the customer feel?","What must I do?","What does good look like?","What do I do if it goes wrong?","Which template do I use?","What feedback should we capture to improve the website?"]
+};
+
+/* ============================ CUSTOMER JOURNEY ============================ */
+const JOURNEY = [
+{
+  num:1, id:"contact", group:"Customer Journey", title:"Contact / Shopify to Order Form",
+  promise:[
+    "The customer should feel listened to, reassured and clear about the next step. They should understand which product may be relevant, how the process works, what information Oxydise needs, and that Oxydise will guide them rather than pressure them.",
+    "Sales should be highly knowledgeable about Oxydise technologies, wellness context and the approved product story. The call should build relationship, trust and empathy."
+  ],
+  owners:[
+    ["Primary owner","Sales"],
+    ["Support","Egor / Giles / Alan for content, approved wording, product story and B2B support"],
+    ["Handover to","Olga once the order form is complete, or once the Shopify delivery form is complete"],
+    ["Approval","Directors for discounts, unusual commercial terms, payment terms, free installs, high-net-worth customers or strategic B2B cases"]
+  ],
+  mustDo:[
+    ["Capture every lead in CRM, including wrong calls.","Sales"],
+    ["Record source: social, Google, word of mouth, AI, outbound, Wellness Lab, Shopify, referral or other.","Sales"],
+    ["Record sub-source where possible: campaign, keyword, page, form, advert or referral name.","Sales"],
+    ["Try to get the customer on the phone. This is where relationship, trust and empathy are built.","Sales"],
+    ["Ask why they are interested and record the customer category.","Sales"],
+    ["Record product interest: HBOT, Red Light, both, small product, B2B or unsure.","Sales"],
+    ["If the lead is B2B or high-value, suggest a director conversation as part of the sales process.","Sales"],
+    ["Explain what Oxydise is about using the Why Oxydise / Sales Document. Use approved technical points only.","Sales"],
+    ["Ask safety / contraindication questions using approved wording.","Sales"],
+    ["For hardshells or complex installs, ask where it will go and request an access video before promising delivery.","Sales"],
+    ["Explain the process: order form → invoice → payment → delivery form → delivery/install → support.","Sales"],
+    ["Explain delivery timing, rent-to-buy and finance routes where relevant. Mention the Wellness Lab.","Sales"],
+    ["Send a personalised follow-up email with the relevant brochure or documents only.","Sales"],
+    ["Set a next task if they do not reply.","Sales"],
+    ["Once agreed, send the correct forms and pass to Olga with all extra information needed.","Sales"]
+  ],
+  bestPractice:[
+    "The call should feel consultative, not transactional. Sales should build trust by asking good questions, listening properly, and tailoring the explanation to the customer's goal.",
+    "The customer should hear a consistent Oxydise story: specialist knowledge, strong service, transparent process, support before and after delivery, and a relationship-led approach."
+  ],
+  callout:["Separate detailed document","The detailed call wording, technical points, product story, objection handling and safety wording sit in the Sales Call Bible.","sales-bible"],
+  ifWrong:[
+    ["Customer does not answer first call","Send missed-call email/WhatsApp and set a task to call the next working day."],
+    ["Customer does not answer second call","Try again the following day and send the second message."],
+    ["Customer still does not answer","Move to General Enquiry, set a one-week follow-up, then use email nurture if consent exists."],
+    ["Order form not returned","Call the next day to check they received it and ask what is unclear."],
+    ["Customer asks medical advice","Do not diagnose or advise medically. Use approved wording and suggest speaking to Dr Masha where appropriate."],
+    ["Shopify order already placed","Still call, understand the reason for purchase, check contraindications and explain delivery/support process."],
+    ["Customer says \u201Clater\u201D","Do not lose them. Add a dated callback task and keep the lead warm."]
+  ],
+  crm:[["Lead source","Yes"],["Sub-source / campaign / page","If known"],["Product interest","Yes"],["Customer category","Yes"],["Reason for enquiry","Yes"],["Safety / contraindication questions asked","Yes"],["Buying route","Yes"],["Delivery / access notes","If relevant"],["Follow-up task","Yes"],["Owner","Yes"]],
+  templates:["Autoresponses: email, Shopify, WhatsApp & Instagram","Email to follow the conversation","Sales Document — key points, benefits, approved usage & what not to say","First / second / third not-picked-up call messages","Safety / contraindication question document","HBOT brochure email — by category + per product","Red Light brochure email — by category + per product","All-products brochure (undecided customers)","B2B brochure with all products","Why Oxydise brochure — rent-to-buy, team, finance, delivery, support","Deal sign-off document","Order form email + order form","Order form chase email","Shopify order follow-up automation"],
+  feedback:["What did the customer ask that the website did not answer?","What confused them before the call?","Which page should be improved?","Which new FAQ should be added?","Which case study or proof point would have helped?"]
+},
+{
+  num:2, id:"order-delivery", group:"Customer Journey", title:"Order Form to Delivery",
+  promise:["The customer should feel that their order is being handled professionally and that the next step is clear: invoice, payment, rental/delivery form if required, then delivery booking."],
+  owners:[["Primary owner","Olga"],["Support","Sales for missing customer information"],["Support","Driver for delivery availability"],["Approval","Directors for payment exceptions or unusual requests"]],
+  mustDo:[
+    ["Check order form and invoice details are complete. Raise the invoice as soon as possible once complete.","Olga / Sales"],
+    ["Raise invoice.","Olga"],
+    ["Send invoice by email with the relevant questionnaire/form.","Olga"],
+    ["Send WhatsApp with invoice attached; explain that once payment and the form are complete, delivery will be booked, and that Olga is the contact at this stage.","Olga"],
+    ["Ask customer when they expect to pay.","Olga"],
+    ["Confirm payment received.","Olga"],
+    ["Tell Sales that payment has been received.","Olga"],
+    ["Reserve the correct equipment.","Olga / Stock owner"],
+    ["Agree delivery date with customer.","Olga"],
+    ["Book driver calendar.","Olga"],
+    ["Update CRM to Delivery Booked.","Olga"]
+  ],
+  bestPractice:["The customer should never wonder what happens next. Every message should clearly explain that the invoice has been sent, the form needs completing, and once payment and the form are received, delivery can be confirmed."],
+  ifWrong:[
+    ["Invoice details missing","Olga sends missing info back to Sales. Sales chases customer."],
+    ["Payment not received","Olga sends reminder, updates expected payment date, keeps Sales informed if relationship-sensitive."],
+    ["Rental/delivery form incomplete","Do not book delivery unless approved exception. Speak to customer if needed."],
+    ["Stock unavailable","Speak to Egor and offer next available date or suitable alternative."],
+    ["Driver unavailable","Do not promise a date until calendar is checked. Keep customer updated."],
+    ["Urgent delivery before payment / outside normal process","Director approval required. Speak to Egor before promising anything."],
+    ["Small product order","No rental form. Dispatch via DHL and update order status. Julija dispatches."],
+    ["Large product order","Agree process with Petro. Large orders take priority, but stock levels must be checked with Egor."]
+  ],
+  crm:[["Invoice number","Yes"],["Invoice sent date","Yes"],["Payment status","Yes — exact statuses to confirm"],["Rental/delivery form status","If required"],["Equipment reserved","Yes"],["Delivery date","Yes"],["Driver assigned","Yes"],["Customer address checked","Yes"]],
+  templates:["Invoice email","Invoice WhatsApp","Rental/delivery form email","Payment reminder","Payment received confirmation","Delivery booking confirmation","Delivery reschedule message","DHL dispatch message"],
+  feedback:["Capture anything the customer asks at this stage that should have been clearer during the sales call, website journey or invoice/payment explanation."]
+},
+{
+  num:3, id:"delivery", group:"Customer Journey", title:"Delivery",
+  promise:["The customer should feel confident, safe and supported. They should know how to use the equipment, understand key safety points, know who to contact, and have a video they can refer back to."],
+  owners:[["Primary owner","Driver"],["Support","Olga for scheduling"],["Support","Sales for customer relationship"],["Support","Petro for maintenance issues"]],
+  mustDo:[
+    ["Message ETA on WhatsApp.","Driver"],["Share WhatsApp location.","Driver"],["Install equipment.","Driver"],["Test equipment.","Driver"],["Record setup/testing video.","Driver"],["Submit delivery form.","Driver"],["Update CRM/stock status.","Driver"],["Explain how to operate equipment.","Driver"],["Explain key safety points.","Driver"],["Give brochure / leaflet / approved customer materials.","Driver"],["Confirm support contacts: Sales and Olga.","Driver"],["Send post-delivery email with video and notes to Sales for the Day 2 call.","Olga"]
+  ],
+  bestPractice:[
+    "The driver should slow down and make sure the customer is comfortable. Ask the customer to show they can operate the machine before leaving. Delivery is a major trust moment, not just a logistics task.",
+    "Drivers need to understand the equipment well enough to answer practical use questions and explain the basics of how the technology works in approved, non-medical language."
+  ],
+  ifWrong:[
+    ["Driver running late","Driver messages customer and informs Olga."],
+    ["Customer not home","Call, WhatsApp, wait agreed time, log failed delivery and rebook."],
+    ["Equipment fault during setup","Do not mark delivery complete. Create maintenance issue and escalate to Petro, or rebook for replacement."],
+    ["Missing accessory","Log it, inform Olga and arrange replacement."],
+    ["Customer nervous or confused","Driver gives extra walkthrough. Sales follows up on Day 2."],
+    ["Customer asks medical questions","Driver does not advise medically; refer to Sales/approved material."],
+    ["Delivery form not submitted","Delivery is not complete until submitted."]
+  ],
+  crm:[["Delivery complete","Yes"],["Equipment ID","Yes"],["Stock status: with customer","Yes"],["Setup video uploaded","Yes"],["Safety explanation given","Yes"],["Customer trained","Yes"],["Accessories delivered","Yes"],["Day 2 check-in task created","Yes"]],
+  templates:["Delivery ETA WhatsApp","Driver checklist — Egor to create","Installation checklist — Egor to create","Product operating guide — one per product","Safety / contraindication leaflet — give on delivery","Post-delivery email incl. video usage guide","Setup video message","Support contact card","How to get the most from your equipment leaflet","Delivery pack: safety info, QR video codes, support contacts, best-use guidance"],
+  feedback:["What did the customer not understand when you arrived?","Which instructions were hard to explain?","Was any video, guide or FAQ missing?","What question should be added to the website?"]
+},
+{
+  num:4, id:"rental", group:"Customer Journey", title:"Rental Period",
+  promise:["The customer should feel supported after delivery, not abandoned. They should know how to use the equipment, who to contact, and what options they have before the rental ends."],
+  owners:[["Primary owner","Sales"],["Support","Petro for technical issues"],["Support","Olga for collection/admin"],["Approval","Directors for discounts or payment terms"]],
+  mustDo:[
+    ["Call customer on Day 2.","Sales"],["Ask if they have used the equipment.","Sales"],["Ask if everything went smoothly.","Sales"],["Discuss protocol using approved guidance.","Sales"],["Create maintenance ticket if needed.","Sales / Petro"],["Call two weeks before rental end.","Sales"],["Confirm buy, extend or return.","Sales"],["Explain payment terms/finance if buying.","Sales / Olga"],["Hand returning customer to Olga for collection.","Sales"]
+  ],
+  bestPractice:[
+    "The rental period is where trust and conversion happen. Sales should not only ask \u201CAre you buying?\u201D — understand how the customer is using the equipment, what they are noticing, what concerns they still have, and whether the product fits their life.",
+    "Any advice on improving use should follow approved protocol guidance and should not become medical advice."
+  ],
+  callout:["Day 2 & two-week scripts","Full scripts for the Day 2 after-delivery call and the two-weeks-before-collection call sit in the Sales Call Bible.","sales-bible"],
+  ifWrong:[
+    ["Customer has not used equipment","Understand why, resend video/guide and offer support."],
+    ["Customer is confused","Re-explain, send materials and arrange support if needed."],
+    ["Technical problem","Create maintenance ticket and escalate to Petro."],
+    ["Customer unhappy","Sales listens, documents issue and escalates if serious."],
+    ["No answer on Day 2","Send message and provide number to call back."],
+    ["No answer before rental end","Use call/message sequence, then Olga prepares collection process."],
+    ["Customer wants discount","Sales cannot promise. Director approval required; communicate to Egor."],
+    ["Customer wants payment terms","Record request. Approval needed. Whatever is agreed must be communicated properly to Olga."]
+  ],
+  crm:[["Day 2 check-in complete","Yes"],["Issues raised","Yes"],["Maintenance ticket linked","If needed"],["End-of-rental decision","Yes"],["Buy / extend / return","Yes"],["Next action date","Yes"]],
+  templates:["Day 2 check-in call script + follow-up","Protocol support email","Two-weeks-before-end call script + follow-up","Buy / extend / return email","Payment terms explanation","Director discount approval message"],
+  feedback:["What questions did the customer ask during the rental?","What stopped them using it?","What made them consider buying?","What made them hesitate?","Which customer story would have helped?","What content could improve conversion?"]
+},
+{
+  num:5, id:"collection", group:"Customer Journey", title:"Collection",
+  promise:["The customer should feel the end of the rental is handled smoothly and respectfully. If they are happy, they should be invited to review, refer or stay connected."],
+  owners:[["Primary owner","Olga for booking"],["Primary owner","Driver for physical collection"],["Support","Sales for relationship/review"],["Support","Stock owner for warehouse update"]],
+  mustDo:[
+    ["Confirm returning / extending / buying during the two-weeks-before-end call. Aim to extend or convert where appropriate.","Sales"],["If returning, arrange collection date.","Olga"],["Book driver calendar.","Olga"],["Send collection confirmation.","Olga"],["Driver sends ETA/location.","Driver"],["Photograph equipment.","Driver"],["Check accessories.","Driver"],["Pack equipment safely.","Driver"],["Give 10 Pillars of Health booklet if appropriate (sensitivity for vulnerable customers).","Driver"],["Return to warehouse.","Driver"],["Update stock status.","Driver / Stock owner"],["Ask for review if customer is happy, using approved process.","Driver / Sales"],["Send thank-you/review email.","Sales / Marketing"]
+  ],
+  bestPractice:["Do not treat collection as the end of the relationship. It is a chance to collect feedback, ask for a review, understand whether they may return later, and keep them in the right nurture journey."],
+  ifWrong:[
+    ["Customer not home","Driver calls/WhatsApps, Olga rebooks and failed collection is logged."],
+    ["Customer decides to buy","Pause collection. Sales confirms. Olga handles invoice/payment."],
+    ["Equipment damaged","Photograph, log and escalate to Olga/Directors. Get Petro involved."],
+    ["Accessories missing","Record missing items and agree next step."],
+    ["Customer unhappy","Do not ask for review. Sales follows up first and agrees how to resolve."],
+    ["Stock not updated","Equipment cannot be marked available until checked."]
+  ],
+  crm:[["Collection date","Yes"],["Equipment ID","Yes"],["Photos uploaded","Yes"],["Accessories checked","Yes"],["Equipment condition","Yes"],["Stock status","Yes"],["Review requested","Yes"],["Customer sentiment","Yes"]],
+  templates:["Collection booking call script","Collection confirmation email","Day-of-collection WhatsApp","Review request script","Thank-you email","Testimonial request","Referral request","10 Pillars of Health leaflet"],
+  feedback:["Why did the customer return instead of buy?","What would have changed their decision?","What did they like most?","What did they find difficult?","Could this become a case study, testimonial or FAQ?"]
+},
+{
+  num:6, id:"after", group:"Customer Journey", title:"After Collection",
+  promise:["The customer should feel remembered, valued and able to continue learning from Oxydise. If the relationship was positive, they should be invited into reviews, referrals, testimonials or future education. Word of mouth is a significant part of the business, so it should be actively supported."],
+  owners:[["Primary owner","Sales for personal follow-up"],["Primary owner","Egor / Giles for email marketing"],["Support","Olga if final accounting is needed"]],
+  mustDo:[
+    ["Send personal thank-you message.","Sales"],["Request review if appropriate.","Sales"],["Request testimonial if strong relationship.","Sales / Marketing"],["Ask for referral if appropriate.","Sales"],["Tag customer segment.","Sales / Marketing"],["Add to nurture sequence if consent exists.","Marketing"],["Create future reactivation task if relevant.","Sales"]
+  ],
+  bestPractice:["Use the relationship. The best aftercare message should not feel like a generic campaign. It should reference the customer's situation, what they used, what they asked about, or what may be useful for them next."],
+  ifWrong:[
+    ["Customer gives negative feedback","Resolve first. Do not ask for a review."],
+    ["Customer does not reply","Move to nurture only if consent exists."],
+    ["Customer wants to rent again","Create new opportunity; do not leave as closed record."],
+    ["Customer wants to buy after collection","Sales creates opportunity; Olga handles invoice."],
+    ["Customer agrees to testimonial","Schedule properly, collect consent and brief them."]
+  ],
+  crm:[["Review requested","Yes"],["Marketing segment","Yes"],["Reactivation date","If relevant"]],
+  templates:["Review request","Referral request","Reactivation email","New product update","Segment-specific nurture email"],
+  feedback:["What outcome did the customer describe?","Could this become a testimonial?","Did they ask for more education?","What future content would keep them engaged?","What made them trust Oxydise?"]
+}
+];
+
+JOURNEY.push(
+{
+  num:7, id:"general-enquiry", group:"Customer Journey", title:"General Enquiry",
+  promise:["The customer should not feel forgotten just because they were not ready to buy. They should receive useful, relevant education and have an easy route back into a conversation."],
+  owners:[["Primary owner","Sales for short-term follow-up"],["Primary owner","Egor / Giles / Ricky for nurture and content"]],
+  mustDo:[
+    ["Move lead here only after defined contact attempts.","Sales"],["Add category.","Sales"],["Add reason they did not progress.","Sales"],["Set one-week follow-up task if no reply.","Sales"],["Follow up after one week.","Sales"],["Move back to active sales if they re-engage.","Sales"]
+  ],
+  categories:[
+    ["Medical / recovery-led","Injury, fatigue, long Covid, cancer-related, neurological or other health concern."],
+    ["Sports / performance","Athlete, gym, club, recovery or performance."],
+    ["Wellness / optimisation","Longevity, energy, focus, ageing well or general wellbeing."],
+    ["B2B","Clinic, practitioner, gym, wellness centre, club, airport or franchise."],
+    ["Unknown","Not enough information yet."]
+  ],
+  bestPractice:["General enquiry should become a marketing asset, not a graveyard. Every non-ready customer should be tagged and educated based on what they care about."],
+  ifWrong:[
+    ["No category known","Tag Unknown and send requalification email."],
+    ["Customer replies","Move back to Sales pipeline."],
+    ["Medical question by email","Use approved wording only."],
+    ["B2B lead appears","Move to B2B workflow."],
+    ["High-value lead goes cold","Add future follow-up task."]
+  ],
+  crm:[["General enquiry reason","Yes"],["Category","Yes"],["Product interest","Yes"],["Last contact attempt","Yes"],["Next follow-up date","Yes"],["Nurture sequence","If consent exists"]],
+  templates:["General enquiry follow-up","One-week check-in","Requalification email","HBOT education sequence","Red Light education sequence","Sports recovery sequence","Wellness sequence","B2B sequence","Case study email","Book-a-call CTA","Email designs"],
+  feedback:["Which questions are leads repeatedly asking?","What content would re-open the conversation?","Which segment needs a better nurture sequence?"]
+},
+{
+  num:8, id:"accounting", group:"Customer Journey", title:"Accounting",
+  promise:["The customer should feel that payment, invoicing, rental forms, finance and any commercial terms are handled clearly and professionally."],
+  owners:[["Primary owner","Olga"],["Approval","Directors for discounts, refunds, payment terms and free installs"],["Support","Sales for customer context"]],
+  mustDo:[
+    ["Raise correct invoice from the CRM deal or director request.","Olga"],["Send invoice by email with the correct form to fill in.","Olga"],["Send WhatsApp copy, ask customer to confirm receipt, explain that once paid Olga organises delivery.","Olga"],["Track payment status and chase after 3 days unless a different date is agreed.","Olga"],["Confirm payment received to the customer.","Olga"],["Reconcile payment.","Olga"],["Get approval for exceptions.","Olga / Directors"],["Keep CRM and accounting aligned.","Olga"]
+  ],
+  bestPractice:["Accounting messages should be clear, short and reassuring. Customers should never have to chase to understand what they owe, when it is due, or what happens after payment."],
+  ifWrong:[
+    ["Payment overdue","Olga sends reminder and informs Sales if relationship-sensitive."],
+    ["Customer disputes invoice","Check order details, speak to Sales and correct if needed."],
+    ["Wrong invoice sent","Void/credit/reissue properly."],
+    ["Customer wants payment terms","Director approval before anything is promised."],
+    ["Refund requested","Check terms, approval and reason."],
+    ["Discount promised without approval","Escalate internally and record process issue."],
+    ["Free install","Must still be recorded as £0 / special job."]
+  ],
+  crm:[["Invoice number","Yes"],["Invoice date","Yes"],["Payment status","Yes"],["Payment date","Yes"]],
+  callout:["Related accounting SOPs (outside the customer journey)","Bank reconciliation & month end · Credit control · Cash transaction recording · Invoice raising SOP.",null],
+  templates:["Invoice email","Invoice WhatsApp","Payment reminder","Payment received confirmation","Contract for direct debit & different arrangements"],
+  feedback:["Capture anything customers do not understand and anything that should be made clearer in the sales process, website, invoice or payment explanation."]
+},
+{
+  num:9, id:"maintenance", group:"Customer Journey", title:"Maintenance & Broken Equipment",
+  promise:["The customer should feel supported quickly and safely if something goes wrong. They should know the issue has been logged, who owns it, and what happens next."],
+  owners:[["Primary owner","Petro / Maintenance"],["Support","Sales for customer communication"],["Support","Olga for scheduling"],["Support","Driver for replacement/collection"],["Escalation","Directors for serious issues"]],
+  mustDo:[
+    ["Create maintenance ticket.","Petro / Sales / Olga"],["Record equipment ID.","Petro"],["Triage issue severity.","Petro"],["Ask for photo/video if needed.","Petro"],["Decide if customer can continue using equipment.","Petro"],["Schedule repair, replacement or call.","Petro"],["Update customer.","Sales / Petro"],["Update stock status.","Petro"],["Record root cause.","Petro"],["Close ticket only when resolved.","Petro"]
+  ],
+  bestPractice:["Maintenance should be treated as part of the customer experience. A well-handled issue can build trust. A poorly handled issue damages the brand."],
+  ifWrong:[
+    ["Safety concern","Stop-use guidance, escalate and document."],
+    ["Equipment unusable","Prioritise repair or replacement."],
+    ["Repeated fault","Remove equipment from available stock and investigate."],
+    ["Customer caused damage","Photograph, document and escalate."],
+    ["Spare part unavailable","Give clear timeline and consider replacement."],
+    ["Customer unhappy","Sales handles relationship; Petro handles technical fix."],
+    ["Issue found in warehouse","Mark unavailable and create ticket."]
+  ],
+  crm:[["Customer name","Yes"],["Equipment ID","Yes"],["Issue type","Yes"],["Severity","Yes"],["Can customer continue using?","Yes"],["Evidence attached","If needed"],["Owner","Yes"],["Target resolution date","Yes"],["Customer update sent","Yes"],["Resolution","Yes"],["Root cause","Yes"]],
+  templates:["Maintenance acknowledgement","Photo/video request","Safe-use / pause-use message","Repair booking message","Replacement confirmation","Issue resolved message","Apology/service recovery message","Maintenance FAQ"],
+  feedback:["Was this issue preventable with better instructions?","Should there be a troubleshooting video?","Was a common question missing from the FAQ?","Did the customer misunderstand something from delivery?","Do we need an adjustment to the equipment?"]
+},
+{
+  num:10, id:"stock", group:"Customer Journey", title:"Stock & Warehouse",
+  promise:["The customer should receive the right equipment, in the right condition, with all accessories, on the promised date."],
+  owners:[["Primary owner","Olga / stock owner"],["Support","Drivers for movement updates"],["Support","Petro for repair/maintenance status"],["Approval","Directors for free installs, friend installs, influencer placements and special jobs"]],
+  mustDo:[
+    ["Every item has an equipment ID.","Drivers / Stock owner"],["Every item has a status.","Drivers / Stock owner"],["Reserve equipment before delivery is confirmed.","Olga"],["Update status when it leaves warehouse.","Driver"],["Update status when installed.","Driver"],["Update status when collected.","Driver"],["Check condition and accessories on return.","Driver / Warehouse"],["Mark faulty items unavailable and agree repair plan.","Petro"],["Do not mark returned equipment available until checked.","Driver / Stock owner"],["Log all free/special jobs — there must be a booking in/out record.","Directors / Stock owner"],["Label and record any new deliveries into the warehouse.","Warehouse / Stock owner"]
+  ],
+  statuses:["Available","Reserved","Blocked — maintenance","In transit","With customer","Collection booked"],
+  callout:["Movement rule","Every time something leaves the warehouse, is delivered, is collected, arrives new, breaks down or is repaired, the driver/stock owner must put the transaction through.",null],
+  bestPractice:["Stock should be simple enough that anyone can look at it and understand what is available, what is with a customer, what is broken, and what is promised."],
+  ifWrong:[
+    ["Physical stock does not match system","Pause bookings for affected item until reconciled."],
+    ["Accessory missing","Locate, replace or mark incomplete."],
+    ["Equipment damaged on return","Photograph, log and create maintenance ticket."],
+    ["Equipment promised but unavailable","Inform customer and offer alternative date/product."],
+    ["Returned item marked available too soon","Move back to returned/blocked status until checked."],
+    ["Free/friend install requested","Director approval and special job record required."],
+    ["Equipment moves without ID","Not allowed. Correct immediately."]
+  ],
+  crm:[["Equipment ID","Yes"],["Product code","Yes"],["Status","Yes"],["Location","Yes"],["Assigned customer","If with customer"],["Condition","Yes"],["Last maintenance date","Yes"],["Fault history","Yes"]],
+  templates:["Pre-delivery equipment checklist","Return condition checklist","Cleaning checklist","Maintenance checklist","Stock audit checklist"],
+  feedback:["Feedback anything that needs action to Egor and Ricky so stock, warehouse, product or process issues can be fixed."]
+},
+{
+  num:11, id:"new-product", group:"Business Operations", title:"Adding a New Product",
+  promise:["Customers should only be offered products that Oxydise understands, can support, can explain safely, and can deliver or maintain properly. A product should not go live just because it is interesting; it must be operationally ready."],
+  owners:[["Primary owner","Directors"],["Customer process support","Olga, Driver and Sales"],["Brand/marketing support","Giles, videographers, SEO, dev, Google Ads & Meta Ads specialists"]],
+  mustDo:[
+    ["Confirm the customer need, market opportunity and strategic fit.","Directors"],["Complete supplier/manufacturer due diligence.","Directors"],["Collect product documentation: specs, manual, warranty, safety info, CE/UKCA, declaration of conformity, test reports, quality docs.","Directors"],["Confirm website wording, add draft product, create brochure.","Directors"],["Confirm delivery, installation, access, accessories and packaging requirements.","Egor"],["Confirm maintenance requirements, spare parts, fault process and service intervals.","Petro"],["Create product code, SKU, stock status, equipment-ID process and CRM/Shopify setup.","Egor / Ricky"],["Create product one-pager, internal training note, customer FAQ and sales guidance.","Giles / Egor / Alan"],["Prepare website, Shopify, Google Ads, Meta Ads, SEO and launch content.","Egor / Marketing team"],["Train Sales, Olga, Driver and Petro before launch.","Egor / Alan"],["Run a controlled soft launch or pilot, collect feedback and decide go/no-go.","Directors"]
+  ],
+  bestPractice:["Launch slowly and professionally. A new product should not be marketed until the team knows how to sell it, deliver it, support it, maintain it and answer basic customer questions."],
+  ifWrong:[
+    ["Website or Shopify wrong","Pause campaign and correct page/product setup."],
+    ["Customer issue in pilot","Log, fix and decide whether product needs changes before wider rollout."]
+  ],
+  crm:[["Product code / SKU","Yes"],["Product category","Yes"],["Rental/purchase route","Yes"],["Certification pack location","Yes"]],
+  templates:["New product approval checklist","Supplier due diligence checklist","Compliance/certification checklist","Product master data sheet","Product one-pager","Internal product training note","Shoot brief"],
+  feedback:["What did customers ask that we did not prepare for?","What did Sales find hard to explain?","Did delivery/installation work as expected?","Were there product faults or support issues?","Did marketing generate the right lead quality?","Should the product stay, change or be removed?"]
+},
+{
+  num:12, id:"marketing", group:"Business Operations", title:"Marketing Operations",
+  promise:["Customers should see a consistent Oxydise story across website, social, email, paid ads, PR, video and sales materials. Marketing should create trust, educate clearly and generate the right quality leads, not just activity."],
+  owners:[["Primary owner","Giles"],["Content production","Two videographers"],["SEO","SEO specialist"],["Website/dev","Developer"],["Paid acquisition","Google Ads & Meta Ads specialist"],["Customer stories & sales insight","Sales"],["Operational support","Olga, Driver & Petro where needed"],["Approval","Egor / Alan for strategic campaigns, sensitive claims, budgets and partnerships"]],
+  mustDo:[
+    ["Maintain one marketing calendar across social, email, paid, SEO, website, PR and video.","Giles"],["Plan content around agreed pillars: education, outcomes, product, trust and B2B.","Marketing Call"],["Before each shoot, create a shoot brief: objective, story, product, location, shot list, questions, approvals, consent, outputs.","Giles / Videographers / Alan / Toby"],["Get customer consent before recording, photographing or using customer content.","Alan"],["Use client conversations, delivery moments, reviews and common questions as content ideas — do not publish without approval.","Sales / Marketing"],["Follow the content calendar for social posts; avoid ad hoc posting unless approved.","Ricardo"],["Make sure captions, claims and product wording are approved before publishing.","Ricardo"],["Coordinate SEO and dev work through clear briefs, priorities and QA after changes.","Egor"],["Review performance monthly: lead quality, CPL, ROAS, enquiries, wrong calls, traffic, conversion.","Egor"],["Feed learning back into website, sales scripts, FAQs, templates and future content.","Ricardo / Marketing Call"]
+  ],
+  bestPractice:[
+    "Marketing should work as one system. The same campaign idea should connect across website, organic social, paid ads, email, PR, sales conversations and customer stories. Fewer, better campaigns are preferable to scattered activity.",
+    "Before each shoot, everyone should know why the content is being recorded, who it is for, what the final outputs are, and what claims or wording are allowed."
+  ],
+  ifWrong:[
+    ["Shoot has no clear brief","Do not proceed until objective, shot list, consent and outputs are clear."],
+    ["No customer consent","Do not publish. Get consent or do not use the content."],
+    ["Content makes unsupported claims","Pause and rewrite using approved wording."],
+    ["Calendar slips","Slips not allowed."],
+    ["Ads create wrong calls","Log wrong-call reasons and adjust keyword, creative, targeting or landing page. — Egor"],
+    ["Website change breaks conversion","Rollback or fix quickly, then log what happened. — Egor"],
+    ["Post performs poorly","Review hook, creative, audience, timing and landing page; record learning."]
+  ],
+  crm:null,
+  templates:["Marketing calendar","Shoot brief","Shot list","Customer interview question sheet","Social caption template","Brand/claims checklist","Monthly performance report","Post-campaign review"],
+  feedback:["Which questions are customers repeatedly asking?","Which content generated good leads?","Which content generated poor-fit leads?","Which landing pages need improvement?","Which customer stories should become case studies?","Which ad/channel is driving wrong calls?"]
+}
+);
+
+/* ============================ RESOURCE PAGES ============================ */
+const RESOURCES = {};
+
+RESOURCES["templates"] = {
+  num:13, group:"Resources", title:"Template Library & Brochure Register",
+  eyebrow:"Resources",
+  lead:"The templates, brochures, one-pagers and recurring email formats Oxydise needs to support the customer operating system. A working register, not final customer copy. Every item should have one approved version, an owner, and a last-reviewed date. Search the register below.",
+  blocks:[
+    {type:"rules", title:"How this register works", items:[
+      ["One approved version","Every template, brochure and form has one controlled version. Avoid team members sending old wording."],
+      ["Owner and review date","Every item needs an owner and a last-reviewed date."],
+      ["Approved wording only","Medical, safety, protocol, product and performance wording must be controlled."],
+      ["Send what is relevant","Sales should not overload customers — send the smallest useful set."],
+      ["Link to CRM stage","Each template should say which CRM status or next action follows."],
+      ["Comments before drafting","Confirm which templates are needed, who owns them, and what already exists."]
+    ]},
+    {type:"priority-key"},
+    {type:"h2", text:"Master template register", sub:"78 templates across the full operating system. Wording is drafted after the team confirms priority and ownership."},
+    {type:"search", placeholder:"Search 78 templates by name, stage or owner\u2026", target:"tmpl-register"},
+    {type:"register", id:"tmpl-register", head:["ID","Template / document","Stage","Owner","When to use","Pri."], rows:[
+      ["T01","Website enquiry auto-response","Contact","System / Sales","Website form submitted","P1"],
+      ["T02","Shopify order auto-response","Contact","System / Sales","Shopify order placed","P1"],
+      ["T03","WhatsApp first response","Contact","Sales","WhatsApp enquiry received","P1"],
+      ["T04","Instagram first response","Contact","Sales / Marketing","Instagram DM received","P1"],
+      ["T05","Out-of-hours voicemail","Contact","Phone system","Calls outside hours","P1"],
+      ["T06","Missed call message 1","Contact","Sales","First unanswered call","P1"],
+      ["T07","Missed call message 2","Contact","Sales","Second unanswered call","P1"],
+      ["T08","Third attempt / move to nurture","Contact","Sales","Third unanswered call","P1"],
+      ["T09","First follow-up after call","Contact","Sales","After meaningful call","P1"],
+      ["T10","Medical advice / Dr Masha response","Contact","Sales","Medical advice requested","P1"],
+      ["T11","Safety / contraindication document","Sales / Safety","Sales / Driver","Before order & at delivery","P1"],
+      ["T12","Hardshell access video request","Contact","Sales","Hardshell / difficult install","P1"],
+      ["T13","Order form email","Contact","Sales","Customer ready to proceed","P1"],
+      ["T14","Order form chase","Contact","Sales","Order form not returned","P1"],
+      ["T15","Deal sign-off / approval request","Sales / Approval","Sales","Discount, terms, free install","P1"],
+      ["T16","Olga handover note","Handover","Sales","Order/delivery form complete","P1"],
+      ["T17","Invoice email","Order / Accounting","Olga","Invoice raised","P1"],
+      ["T18","Invoice WhatsApp","Order / Accounting","Olga","Invoice sent","P1"],
+      ["T19","Rental/delivery form email","Order to Delivery","Olga","Form needs completing","P1"],
+      ["T20","Payment reminder","Accounting","Olga","Payment not received","P1"],
+      ["T21","Payment received confirmation","Accounting","Olga","Payment received","P1"],
+      ["T22","Delivery booking confirmation","Order to Delivery","Olga","Delivery date agreed","P1"],
+      ["T23","Delivery reschedule message","Order to Delivery","Olga","Date changes","P1"],
+      ["T24","DHL dispatch message","Small products","Julija / Admin","Small product dispatched","P1"],
+      ["T25","Delivery ETA WhatsApp","Delivery","Driver","Day of delivery","P1"],
+      ["T26","Driver checklist","Delivery","Driver","Before leaving / at address","P1"],
+      ["T27","Installation checklist","Delivery","Driver / Petro","Install & setup","P1"],
+      ["T28","Post-delivery email with video","Delivery","Olga / Sales","After delivery","P1"],
+      ["T29","Support contact card","Delivery","Driver","Given at delivery","P1"],
+      ["T30","Delivery pack","Delivery","Driver / Marketing","Physical or email pack","P2"],
+      ["T31","Day 2 check-in call script","Rental","Sales","Day 2 after delivery","P1"],
+      ["T32","Day 2 follow-up message","Rental","Sales","After Day 2 / no answer","P1"],
+      ["T33","Protocol support email","Rental","Sales","Customer needs guidance","P1"],
+      ["T34","Two-weeks-before-end call script","Rental","Sales","Two weeks before end","P1"],
+      ["T35","Buy / extend / return email","Rental","Sales","After rental-end decision","P1"],
+      ["T36","Collection booking call script","Collection","Olga","Returning rental","P1"],
+      ["T37","Collection confirmation email","Collection","Olga","Collection booked","P1"],
+      ["T38","Day-of-collection WhatsApp","Collection","Driver","Collection day","P1"],
+      ["T39","Review request script","Collection / After","Sales / Driver","Happy customer","P1"],
+      ["T40","Thank-you email","After Collection","Sales / Marketing","After collection","P1"],
+      ["T41","Testimonial request","After Collection","Sales / Marketing","Strong relationship","P2"],
+      ["T42","Referral request","After Collection","Sales / Marketing","Happy customer","P2"],
+      ["T43","Reactivation email","After Collection","Marketing / Sales","May rent/buy again","P2"],
+      ["T44","General enquiry follow-up","General Enquiry","Sales","Moved to General Enquiry","P1"],
+      ["T45","One-week check-in","General Enquiry","Sales","One week, no progress","P1"],
+      ["T46","Requalification email","General Enquiry","Marketing / Sales","Unknown / cold lead","P1"],
+      ["T47","Book-a-call CTA email","General Enquiry","Marketing / Sales","Nurture leads","P1"],
+      ["T48","Case study email","General Enquiry","Marketing","Segmented nurture","P2"],
+      ["T49","New product update","Aftercare / Marketing","Marketing","Product launch / update","P2"],
+      ["T50","Monthly customer email","Marketing","Giles / Marketing","Monthly to opted-in","P1"],
+      ["T51","Maintenance acknowledgement","Maintenance","Petro / Sales","Issue logged","P1"],
+      ["T52","Photo/video request","Maintenance","Petro / Sales","Evidence needed","P1"],
+      ["T53","Safe-use / pause-use message","Maintenance","Petro / Sales","Safety concern","P1"],
+      ["T54","Repair booking message","Maintenance","Petro / Olga","Repair scheduled","P1"],
+      ["T55","Replacement confirmation","Maintenance","Petro / Olga","Replacement arranged","P1"],
+      ["T56","Issue resolved message","Maintenance","Petro / Sales","Issue closed","P1"],
+      ["T57","Apology / service recovery","Maintenance","Sales / Directors","Poor experience","P2"],
+      ["T58","Pre-delivery equipment checklist","Stock","Stock owner / Driver","Before leaving warehouse","P1"],
+      ["T59","Return condition checklist","Stock","Driver / Warehouse","Equipment returned","P1"],
+      ["T60","Cleaning checklist","Stock","Warehouse","After return","P1"],
+      ["T61","Stock audit checklist","Stock","Stock owner","Regular audit","P2"],
+      ["T62","New product approval checklist","New Product","Directors","Before adding product","P1"],
+      ["T63","Supplier due diligence checklist","New Product","Directors","New supplier/product","P1"],
+      ["T64","Compliance/certification checklist","New Product","Directors / Egor","Before launch","P1"],
+      ["T65","Product master data sheet","New Product / Stock","Egor / Ricky","New SKU setup","P1"],
+      ["T66","Product one-pager template","Product","Giles / Egor","For every product","P1"],
+      ["T67","Internal product training note","Education","Giles / Egor / Alan","Before launch","P1"],
+      ["T68","Marketing calendar template","Marketing","Giles","Monthly/quarterly planning","P1"],
+      ["T69","Shoot brief","Marketing","Giles / Videographers","Before every shoot","P1"],
+      ["T70","Customer consent form","Marketing","Alan / Marketing","Before using content","P1"],
+      ["T71","Social caption template","Marketing","Ricardo / Giles","Organic social posts","P1"],
+      ["T72","Brand/claims checklist","Marketing","Giles / Egor","Before publishing","P1"],
+      ["T73","SEO brief","Marketing / Website","SEO specialist / Egor","New / improved page","P2"],
+      ["T74","Paid ads brief","Marketing / Paid","Google/Meta specialist","New campaign","P2"],
+      ["T75","Monthly performance report","Marketing","Giles / Egor","Monthly review","P1"],
+      ["T76","Post-campaign review","Marketing","Giles / Egor","After campaign","P2"],
+      ["T77","Website feedback card","Website Feedback","All team","Unclear customer question","P1"],
+      ["T78","Exception card","Exception Rules","All team","Something goes wrong","P1"]
+    ]},
+    {type:"h2", text:"Category-level brochures", sub:"Product list checked against the Oxydise website Shop All page (30 May 2026) — 17 results."},
+    {type:"table", head:["ID","Brochure / pack","Used for","Pri."], rows:[
+      ["B01","HBOT brochure","All HBOT enquiries","P1"],
+      ["B02","Red Light brochure","All Red Light enquiries","P1"],
+      ["B03","All-products brochure","Customers unsure what they want","P1"],
+      ["B04","B2B product catalogue","Clinics, gyms, hotels, clubs, airports","P1"],
+      ["B05","Why Oxydise / How It Works","Most sales enquiries","P1"],
+      ["B06","Certification & compliance pack","B2B, hardshell, high-value","P1"],
+      ["B07","Delivery & installation pack","Post-order / delivery prep","P1"],
+      ["B08","Safety & contraindications document","All relevant customers","P1"],
+      ["B09","Recovery Stacks brochure","Bundle enquiries / cross-sell","P2"],
+      ["B10","Testing process guide","DNA / gut testing enquiries","P2"],
+      ["B11","Supporting wellness tools guide","Hydrogen / PEMF / supporting tools","P3"]
+    ]},
+    {type:"h2", text:"Recommended first build wave", sub:"The practical starting point — build these before drafting every possible document."},
+    {type:"orderlist", items:[
+      ["Website, WhatsApp, Instagram & Shopify auto-responses","Stops leads being handled inconsistently."],
+      ["Missed call 1/2/3 templates","Immediate improvement to lead follow-up."],
+      ["First follow-up after call","Most important sales email after the call."],
+      ["Safety / contraindication document","Safety and compliance-critical."],
+      ["Why Oxydise / How It Works","Main trust document — finance, rent-to-buy, delivery, support, certification."],
+      ["HBOT brochure + chamber one-pagers","Core product range."],
+      ["Red Light brochure + panel/bed one-pagers","Second core product range."],
+      ["Order form email + chase","Moves agreed customers forward."],
+      ["Shopify follow-up + delivery/access form","Makes Shopify orders operationally safe."],
+      ["General enquiry follow-up + one-week + monthly email","Prevents warm leads becoming dead leads."],
+      ["Invoice / payment / delivery booking templates","Makes Olga's stage consistent."],
+      ["Delivery ETA, checklist & post-delivery email","Protects trust at delivery."]
+    ]}
+  ]
+};
+
+RESOURCES["feedback"] = {
+  num:15, group:"Resources", title:"Website Feedback & Improvements",
+  eyebrow:"Resources",
+  lead:"One shared improvement board. Customer questions should become better website pages, FAQs, emails, templates, videos or sales scripts. Every stage of the journey funnels its \u201Cwebsite feedback\u201D here.",
+  blocks:[
+    {type:"fb-board"},
+    {type:"h2", text:"Feedback card", sub:"The fields captured for every piece of customer feedback."},
+    {type:"cards", items:[
+      {t:"Customer question",d:"The exact thing the customer asked."},
+      {t:"Where it came from",d:"Call, delivery, email, WhatsApp, collection or general enquiry."},
+      {t:"Customer category",d:"Medical, sports, wellness, beauty, B2B or unknown."},
+      {t:"Journey stage",d:"Which stage of the operating system it surfaced at."},
+      {t:"Website page affected",d:"The current page that should change."},
+      {t:"Suggested improvement",d:"The proposed fix to the page, FAQ, email or script."},
+      {t:"Urgency",d:"Low / Medium / High."},
+      {t:"Owner",d:"Egor / Giles / Sales / Olga / Petro."},
+      {t:"Status",d:"New / Reviewing / In progress / Done."}
+    ]},
+    {type:"callout", k:"Why it matters", text:"Customer feedback improves the website. Questions from calls, delivery and support should become better FAQs, emails, videos, templates or sales scripts — turning every non-obvious question into a permanent improvement."}
+  ]
+};
+
+RESOURCES["exceptions"] = {
+  num:16, group:"Resources", title:"Exception Rules",
+  eyebrow:"Resources",
+  lead:"If something goes wrong, it gets logged — owner, action and resolution. Exceptions are how the operating system learns. The exception card (T78) records each one consistently.",
+  blocks:[
+    {type:"h2", text:"Exception card", sub:"What to record whenever something goes off-process."},
+    {type:"cards", items:[
+      {t:"Owner",d:"Who is accountable for resolving this exception."},
+      {t:"Customer message",d:"What was communicated to the customer, and when."},
+      {t:"CRM update",d:"The status, note or task logged against the record."},
+      {t:"Resolution",d:"How it was resolved, and what changed to prevent a repeat."}
+    ]},
+    {type:"rules", title:"Standing exception rules", items:[
+      ["Every exception is logged","Record the owner, action and resolution — no silent fixes."],
+      ["Director approval","Discounts, payment terms, refunds, free installs, friend/influencer placements and special jobs all require director sign-off."],
+      ["Stock must match reality","If physical stock and the system disagree, pause bookings for that item until reconciled."],
+      ["Safety first","Any safety concern triggers stop-use guidance, escalation and documentation before anything else."],
+      ["Approved wording","Medical, safety, protocol and product claims must use approved wording, even when handling an exception."]
+    ]}
+  ]
+};
+
+RESOURCES["education"] = {
+  num:14, group:"Resources", title:"Oxydise Education",
+  eyebrow:"Resources \u00b7 Knowledge Base v1",
+  lead:"What everyone at Oxydise should know. An external learning library, technology primer and team education structure covering HBOT, Red Light Therapy, mechanisms, safety language, protocols, studies, podcasts and books. Internal education \u2014 not medical advice, and not final approved customer claims.",
+  blocks:[
+    {type:"callout", k:"Baseline rule", text:"The knowledge base should educate the team deeply, but customer conversations must remain simple, careful and approved. Staff should understand more than they say."},
+    {type:"h2", text:"Knowledge-base principles"},
+    {type:"table", head:["Principle","What it means for staff"], rows:[
+      ["Education first","Use the science to understand the technology. Do not turn every mechanism into a customer claim."],
+      ["Plain English first","A tired, stressed customer should understand the explanation without a biology degree."],
+      ["Evidence-aware, not hype-led","Say \u201Cresearch suggests\u201D, \u201Cmay support\u201D, \u201Cis being studied\u201D, or \u201Csome customers report\u201D rather than promising outcomes."],
+      ["Safety before conversion","Contraindications, pressure tolerance, photosensitivity and practical fit come before sales targets."],
+      ["Protocols are context-dependent","Pressure, frequency, session length, light dose and total exposure depend on the person, goal and safety profile."],
+      ["Anecdotes are not evidence","Customer stories help people understand possibilities, but are never proof or a guarantee."],
+      ["Keep a living library","Every study, podcast, book and protocol card needs an owner, review date and status."]
+    ]},
+    {type:"h2", text:"Required learning pathway", sub:"New starters should spend 30\u201360 minutes per working day on education for their first month."},
+    {type:"table", head:["Level","Who","Goal"], rows:[
+      ["Start Here \u2014 Week 1","Everyone","Understand what Oxydise does, what HBOT/RLT are, and what must never be overclaimed."],
+      ["Product Confidence \u2014 Week 2","Sales, admin, drivers, marketing","Explain HBOT and RLT simply and answer common practical questions."],
+      ["Protocol Confidence \u2014 Week 3","Sales, delivery/support, directors","Understand consistency, total dose, session frequency and when to escalate."],
+      ["Advanced Science \u2014 Month 1","Sales, Alan/Egor/Giles, content","Understand studies, mechanisms and key names in HBOT, PBM and longevity."],
+      ["Sector Awareness \u2014 Ongoing","Everyone","Know the wider wellness/biohacking context and products customers may already use."]
+    ]},
+    {type:"h2", text:"HBOT \u2014 the simple explanation", sub:"What everyone should be able to say."},
+    {type:"callout", k:"Customer-safe summary", text:"HBOT does not force the body to heal. It changes the oxygen environment so the body has more of what it needs to repair, regulate inflammation and produce energy. Use \u201Csupport\u201D language, not \u201Ctreat\u201D or \u201Ccure\u201D language."},
+    {type:"table", head:["Concept","Plain-English explanation"], rows:[
+      ["ATA","Atmospheres absolute. 1.0 ATA is normal sea-level pressure; a 1.5 ATA chamber is 50% more pressure than normal air."],
+      ["Oxygen percentage","Room air is ~21% oxygen. Concentrators commonly deliver ~90\u201396% through a mask or hood."],
+      ["Henry's law","More pressure over a gas means more of that gas can dissolve into liquid \u2014 why pressure helps oxygen dissolve into plasma."],
+      ["Plasma oxygen","Oxygen dissolved directly in blood fluid, not carried on haemoglobin. The hidden advantage of HBOT."],
+      ["Air breaks / off-gassing","Short breaks from the oxygen mask during longer sessions, used to create oxygen fluctuations that may trigger adaptive repair signalling."]
+    ]},
+    {type:"h2", text:"HBOT pressure framework"},
+    {type:"table", head:["Pressure range","Positioning","Caution"], rows:[
+      ["1.3\u20131.5 ATA","Mild\u2013moderate. Comfortable for many; practical for repeated home sessions. Wellness, fatigue, brain fog, long-term programmes.","Consistency and total sessions matter. Do not oversell low pressure as equivalent to clinical hospital HBOT."],
+      ["1.7\u20132.0 ATA","Higher oxygen push, typically hardshell. Acute injury, stubborn tissue recovery, advanced neurological/post-surgical contexts.","Not automatically \u201Cbetter\u201D for everyone."],
+      ["2.0+ ATA","Clinical/medical range \u2014 hospital indications, serious wounds, radiation injury, decompression sickness.","Usually medical indication, prescription or qualified supervision."]
+    ]},
+    {type:"h2", text:"HBOT protocol cards", sub:"Internal working guidance \u2014 always consider safety, contraindications and medical supervision."},
+    {type:"table", head:["Customer goal","Typical internal guidance"], rows:[
+      ["General wellness / energy / longevity","2\u20133 sessions/week; 40-session block; maintenance 1/week if useful."],
+      ["Chronic inflammation / pain / autoimmune","4\u20136 sessions/week; 40\u201360 sessions; review around session 20."],
+      ["Neurological / brain health / brain fog","Often 5/week initially; 40\u201360 sessions; step down after week 3\u20134."],
+      ["Cancer support / post-treatment recovery","3\u20135 sessions/week; 60 sessions+; oncology-team involvement; supportive recovery only."],
+      ["Sports performance / in-season recovery","3\u20134 sessions/week ongoing."],
+      ["Sports injury / rehab","Often 5/week; 40\u201360 sessions."],
+      ["Post-surgery / tissue repair","Often 5/week; 40\u201360 sessions."],
+      ["Long Covid / post-viral fatigue","4\u20135 sessions/week; 30\u201350 sessions; track sleep, HRV, steps, symptoms."]
+    ]},
+    {type:"h2", text:"Red Light Therapy \u2014 the simple explanation"},
+    {type:"callout", k:"Customer-safe summary", text:"Red Light Therapy is a way of giving cells a useful light signal. It may support energy production, circulation, recovery and skin health when used consistently and at the right dose. It is not a cure, and more light is not always better."},
+    {type:"table", head:["Term","Meaning","What staff should know"], rows:[
+      ["Wavelength (nm)","The type of light. Red ~630\u2013660 nm; near-infrared ~810\u2013850 nm.","Different wavelengths penetrate differently. Do not just say \u201Cstronger\u201D."],
+      ["Irradiance (mW/cm\u00b2)","Power arriving at the skin per cm\u00b2.","Supplier numbers can be inflated. Measured distance matters."],
+      ["Fluence / dose (J/cm\u00b2)","Total light energy delivered over time. Dose = irradiance \u00d7 time.","Too little may do nothing; too much can blunt the effect."],
+      ["Biphasic dose response","A little stimulates, a moderate amount may be optimal, too much may be less effective.","The \u201Cmore is not always better\u201D principle."]
+    ]},
+    {type:"h2", text:"RLT protocol cards"},
+    {type:"table", head:["Use case","Session","Frequency"], rows:[
+      ["General wellness / energy / mood","10\u201320 min","3\u20135\u00d7/week first month, then 2\u20133\u00d7/week"],
+      ["Skin / beauty / collagen","10\u201320 min, expose skin","3\u20135\u00d7/week initially"],
+      ["Muscle recovery / sports","10\u201320 min around training","3\u20135\u00d7/week or around heavy sessions"],
+      ["Joint / pain / stiffness","10\u201320 min targeted or full body","3\u20135\u00d7/week initially"],
+      ["Sensitive users","Shorter / lower output","Build gradually"]
+    ]},
+    {type:"callout", k:"Eye safety", text:"Online, many influencers say you can look at red light \u2014 we would not recommend it. We advise eye protection for all clients."},
+    {type:"h2", text:"Safety, contraindications & claims guardrails"},
+    {type:"callout", k:"Best one-sentence guardrail", text:"We can talk about how the technology works, what research is exploring and what customers often report, but we do not diagnose, treat, prescribe or promise outcomes."},
+    {type:"h2", text:"Supporting studies \u2014 what they support and do not prove", sub:"A curated evidence map, not a full literature review."},
+    {type:"table", head:["Study / resource","What it supports","Use carefully"], rows:[
+      ["UHMS indications [R2]","HBOT is established standard care for specific medical indications.","Not that home wellness HBOT treats every condition."],
+      ["Thom et al. 2006 [R5]","HBOT mobilised stem/progenitor cells via a nitric-oxide mechanism.","Not guaranteed regeneration or cure \u2014 mechanism education only."],
+      ["Hachmo et al. 2020 [R6]","Repeated HBOT in healthy ageing adults: increased telomere length, fewer senescent immune cells.","Not a universal anti-ageing guarantee. Frame carefully."],
+      ["Zilberman-Itskovich 2022 [R7]","RCT in post-COVID condition reported neurocognitive and symptom improvements.","Not that every Long COVID case responds, or that home protocols are identical."],
+      ["Hadanny et al. 2020 [R8]","HBOT in healthy older adults associated with cognitive enhancement and cerebral blood-flow changes.","Not that HBOT prevents dementia."],
+      ["Huang et al. 2011 [R11]","Biphasic dose response: low/moderate doses stimulate; excessive dose reduces effect.","Not that there is one perfect dose for all customers."],
+      ["Wunsch & Matuschka 2014 [R13]","Controlled trial supports red/NIR light for skin appearance and collagen.","Not instant cosmetic transformation."]
+    ]},
+    {type:"h2", text:"Podcast & video library", sub:"For internal education and pattern recognition \u2014 not primary evidence."},
+    {type:"linktable", head:["Priority","Resource","Link"], rows:[
+      ["Required","Alan Trim with Oli Patrick \u2014 Hyperbarics and Beyond","https://open.spotify.com/episode/7HScBEB65u3Qo2BE6q83h3"],
+      ["Required","Dr Scott Sherr on The Dr. Hyman Show","https://www.youtube.com/watch?v=uaZNFWb9pxg"],
+      ["Required","Jason Sonners \u2014 low vs high pressure / anti-ageing","https://www.youtube.com/watch?v=y6XK2tQSZOE"],
+      ["Required","Huberman Lab \u2014 Using light to optimise health","https://www.youtube.com/watch?v=UF0nqolsNZc"],
+      ["Required","Bryan Johnson \u2014 India air pollution + HBOT","https://www.youtube.com/watch?v=XVJaqRSrEZA"],
+      ["Recommended","Andrew Huberman / Glen Jeffery \u2014 red light insights","https://www.ucl.ac.uk/news/2021/nov/morning-exposure-deep-red-light-improves-declining-eyesight"]
+    ]},
+    {type:"callout", k:"Alan's podcasts", text:"All Alan podcasts should be required listening for sales and marketing \u2014 they show how the founder explains the story, avoids hype, and connects science to real customer motivation. New Alan podcasts are added within one week of publication."},
+    {type:"h2", text:"People everyone should know"},
+    {type:"table", head:["Name","Field","Why staff should know them"], rows:[
+      ["Dr Shai Efrati / Sagol Center","HBOT, neuroplasticity, ageing, post-COVID","The Israeli research direction and the hyperoxic-hypoxic paradox. Use cautiously."],
+      ["Dr Jason Sonners","HBOT education, mild vs higher pressure","Practical HBOT education and dose mindset. Confirm study status before claims."],
+      ["Dr Scott Sherr","HBOT, optimisation, oxygen metabolism","Clear communicator for why oxygen and pressure matter."],
+      ["Prof Michael Hamblin","Photobiomodulation mechanisms","Foundational PBM literature; RLT credibility."],
+      ["Prof Glen Jeffery","Red light, mitochondria, ageing retina","670 nm / eye-energy discussions; do not generalise to all devices."],
+      ["Oli Patrick","Physiology, performance, recovery","Important Oxydise advisor / collaborator."],
+      ["Dr Masha Makeeva","HBOT safety, regenerative therapies","Escalation point for medical-suitability conversations."],
+      ["Peter Attia","Healthspan, VO2 max, metabolic health","Core longevity language."],
+      ["Andrew Huberman","Neuroscience, circadian light","Public education around light, sleep and behaviour."]
+    ]},
+    {type:"h2", text:"Recommended books", sub:"Internal education, not proof for product claims."},
+    {type:"cards", items:[
+      {t:"The Mind-Gut Connection \u2014 Mayer",d:"Gut-brain axis, microbiome, mood. Why gut health, inflammation and recovery connect."},
+      {t:"Lifespan \u2014 David Sinclair",d:"Longevity, ageing hallmarks, epigenetics. Teach that longevity claims are contested."},
+      {t:"Boundless \u2014 Ben Greenfield",d:"Biohacking, recovery, sleep, devices. The language of biohacker customers."},
+      {t:"Radical Remission \u2014 Kelly Turner",d:"Patient agency and lifestyle factors. Never imply cancer is cured by lifestyle or equipment."},
+      {t:"Outlive \u2014 Peter Attia",d:"Healthspan, risk, exercise, cardiovascular base."},
+      {t:"Why We Sleep \u2014 Matthew Walker",d:"Sleep, recovery and why customers notice sleep changes."}
+    ]},
+    {type:"h2", text:"Prominent Oxydise-associated people", sub:"Only mention a person if their relationship/story is publicly or internally approved. Never discuss private health information."},
+    {type:"table", head:["Name","Relevance","When to mention"], rows:[
+      ["Anthony Elanga","Sports performance / recovery credibility","Approved public wording only. Useful with footballers and performance customers."],
+      ["Ola Aina","Elite sport recovery credibility","Approved public wording only."],
+      ["Ben Whittaker","Combat sport recovery, marginal gains","Approved public wording only."],
+      ["Joseph Parker","High-performance recovery story","Approved public wording only."],
+      ["Gorka Marquez","Dance, performance, energy, recovery","If public and approved."],
+      ["Tom Stoltman / Stoltman Brothers","Strength, training load, recovery","Approved wording only."]
+    ]},
+    {type:"callout", k:"Best moment to use names", text:"Mention prominent customers after listening to the customer goal: athletes care about recovery; beauty customers care about skin and confidence; chronic-illness customers care about safety and empathy. Do not name-drop before the customer feels heard."}
+  ]
+};
+
+RESOURCES["sales-bible"] = {
+  num:17, group:"Resources", title:"Sales Call Bible",
+  eyebrow:"Resources \u00b7 Internal draft",
+  lead:"A practical structure for calls: how to build trust, listen properly, ask the right questions, explain HBOT and Red Light Therapy safely, use customer stories appropriately, and know exactly what to do after each conversation. Not a robotic script \u2014 a consistent standard: calm, expert, empathetic, clear and commercially disciplined.",
+  blocks:[
+    {type:"callout", k:"One-line rule", text:"Every lead must be captured, called, qualified, safety-checked, followed up, and given a next task."},
+    {type:"h2", text:"Non-negotiables for every call"},
+    {type:"table", head:["Non-negotiable","What it means in practice"], rows:[
+      ["Every lead goes into CRM","Wrong calls are still logged \u2014 they improve website wording, ads and lead quality."],
+      ["Every customer has an owner","Sales owns the lead until order form, Shopify delivery form or admin handover is complete."],
+      ["Every customer has a next action","No call ends without a next task, follow-up date or handover."],
+      ["Ask why they enquired","Do not jump straight into product. Understand the customer first."],
+      ["Ask safety questions","Use approved contraindication wording. Pause and escalate if unclear."],
+      ["No medical advice","Do not diagnose, recommend treatment, change medication advice or promise outcomes."],
+      ["Use approved language","Explain mechanisms and support safely. Do not improvise medical claims."],
+      ["Tailor the follow-up","Send only the relevant brochures and documents."],
+      ["Record what was discussed","Source, category, product interest, reason, safety status, buying route, access notes, next task."]
+    ]},
+    {type:"callout", k:"The sales mindset", text:"This is a consultation, not a pitch. The customer should feel listened to, reassured and clear on what happens next."},
+    {type:"h2", text:"The Oxydise way of communicating", sub:"Calm, credible, considered and practical \u2014 confident without pushy, scientific without clinical, empathetic without vague."},
+    {type:"table", head:["Value","How it sounds on a call"], rows:[
+      ["Trust","\u201CI'll be honest about what we can and cannot say.\u201D"],
+      ["Empathy","\u201CTell me what has led you to look at this now.\u201D"],
+      ["Relationships","\u201CWe support you before, during and after delivery.\u201D"],
+      ["Curiosity","\u201CLet me understand the background before recommending anything.\u201D"],
+      ["Detail","\u201CLet's check the room, access, safety and usage plan properly.\u201D"],
+      ["Innovation","\u201CWe're constantly improving the equipment with our manufacturing partners.\u201D"]
+    ]},
+    {type:"callout", k:"Tone rule", text:"Avoid hype. Avoid urgency. Avoid \u201Cthis will fix you\u201D. Use phrases such as \u201Csupports\u201D, \u201Cmay help\u201D, \u201Cdesigned to\u201D, \u201Cresearch suggests\u201D, \u201Cmany customers report\u201D and \u201Cwe will guide you\u201D."},
+    {type:"h2", text:"Full first-call structure"},
+    {type:"orderlist", items:[
+      ["Open warmly","Confirm time, thank them, explain Oxydise starts by understanding the goal rather than pushing equipment."],
+      ["Set the agenda","\u201CI'll ask a few questions, check suitability and safety, then explain the best route and next steps.\u201D"],
+      ["Understand why now","What triggered the enquiry, who it is for, and what outcome matters most."],
+      ["Categorise","Medical/recovery, sports, wellness, beauty, B2B, existing, wrong lead or unknown."],
+      ["Product interest","HBOT, Red Light, both, small products, B2B or unsure."],
+      ["Safety screen","Ask contraindication questions. Escalate medical questions."],
+      ["Practical fit","Room, access, space, power, mobility, stairs, hardshell access video, red-light placement."],
+      ["Explain Oxydise","Values, service model, rental/purchase, installation, support, product-development story."],
+      ["Explain relevant product","Plain-English mechanism and condition-relevant approved support points."],
+      ["Social proof","Relevant customer stories \u2014 after discovery, never as a cold opener."],
+      ["Commercial route","Rental, purchase, rent-to-buy, 12-month finance, B2B route or director call."],
+      ["Next step","Email, documents, order form, delivery form, Dr Masha call, director call, callback task."],
+      ["CRM update","Source, reason, category, safety, documents, buying route, access notes, next action."]
+    ]},
+    {type:"script", k:"Default opener", text:"\u201CHi [Name], it's [Salesperson] from Oxydise. Thanks for getting in touch. Is now still a good time for a few minutes? I saw you were looking at [HBOT / Red Light / both]. Rather than just send a brochure, I like to understand what has brought you to us and what you are hoping to achieve, because the right route is different for different people.\u201D"},
+    {type:"h2", text:"Safety, contraindications & medical-claim guardrails"},
+    {type:"callout", k:"Non-negotiable safety statement", text:"The salesperson must not diagnose, treat, prescribe, interpret scans or blood tests, advise on medication, advise against oncology treatment, or promise outcomes. Medical questions go to the customer's clinician or Dr Masha where appropriate."},
+    {type:"script", k:"Medical advice response", text:"\u201CThat is a medical question, so I would not want to give you the wrong advice. We can explain how the equipment works and what the process looks like, but for your specific situation it would be best to speak with a qualified clinician. We can also arrange a consultation with Dr Masha where appropriate.\u201D"},
+    {type:"h2", text:"HBOT contraindication screen", sub:"Ask before progressing to rental, purchase or delivery. If any answer is yes or unclear \u2014 pause and escalate."},
+    {type:"table", head:["Question","If yes / unsure"], rows:[
+      ["Ever had a pneumothorax, collapsed lung, lung blebs or significant lung disease?","Pause. Clinician review required."],
+      ["Current chest infection, fever, severe sinus infection or blocked ears?","Delay until resolved or clinician confirms."],
+      ["Recent or planned chest/thoracic surgery?","Pause. Clinician review required."],
+      ["Currently receiving chemotherapy (esp. doxorubicin, cisplatin, bleomycin-type)?","Pause. Oncology/clinician sign-off required."],
+      ["COPD, emphysema, severe asthma or air-trapping issues?","Pause. Clinician review required."],
+      ["Uncontrolled heart failure or serious cardiac instability?","Pause. Clinician review required."],
+      ["Seizure disorder or history of oxygen sensitivity?","Pause. Clinician review required."],
+      ["Pregnant?","Usually avoid unless medically indicated. Clinician route only."],
+      ["Recent ear surgery, ear barotrauma, or cannot equalise ear pressure?","Delay or clinician review."]
+    ]},
+    {type:"h2", text:"Claims framework"},
+    {type:"dodont", rows:[
+      ["\u201CHBOT supports oxygen delivery and may support recovery, inflammation balance and tissue repair.\u201D","\u201CHBOT cures inflammation / cancer / long Covid / neurological conditions.\u201D"],
+      ["\u201CResearch is strongest for recognised medical indications, with emerging evidence elsewhere.\u201D","\u201CThe science proves it will work for you.\u201D"],
+      ["\u201CMany customers report improvements in energy, sleep, focus or recovery, but results vary.\u201D","\u201CYou will feel better after X sessions.\u201D"],
+      ["\u201CRLT supports cellular energy and is used for skin, recovery and comfort goals.\u201D","\u201CRLT treats disease.\u201D"],
+      ["\u201CWe can discuss protocols, but we do not replace your clinician.\u201D","\u201CStop/change your medication or treatment plan.\u201D"]
+    ]},
+    {type:"h2", text:"Objection handling"},
+    {type:"table", head:["Concern","Best response","Avoid saying"], rows:[
+      ["\u201CIs it safe?\u201D","\u201CIt is generally well tolerated when screened and used correctly. That is why we ask safety questions and provide training.\u201D","\u201CIt is completely risk-free.\u201D"],
+      ["\u201CWill it work for me?\u201D","\u201CWe can explain the mechanism, match it to your goal, and track response over a sensible block.\u201D","\u201CYes, definitely.\u201D"],
+      ["\u201CHow many sessions?\u201D","\u201CIt depends on the goal. One or two sessions is rarely enough. We usually think in blocks; 40\u201360 sessions is where most people get strong effects.\u201D","\u201CYou only need one session.\u201D"],
+      ["\u201CI'm claustrophobic.\u201D","\u201CThat is common. We can talk through chamber type, training and starting slowly. The Wellness Lab can help some people experience it first.\u201D","\u201CYou'll be fine.\u201D"],
+      ["\u201CIt is expensive.\u201D","\u201CThat is why rental, rent-to-buy and finance routes exist. We can start with the most sensible level of commitment.\u201D","\u201CIt is cheap.\u201D"],
+      ["\u201CI found a cheaper one online.\u201D","\u201CCompare the whole package: equipment, safety, training, delivery, support, warranty and advice. Tell me who it is and I'll give you an honest view.\u201D","\u201CCheap ones are dangerous.\u201D"]
+    ]},
+    {type:"h2", text:"Do not say"},
+    {type:"list", items:[
+      "\u201CHBOT cures cancer / long Covid / dementia / autoimmune disease / infertility.\u201D",
+      "\u201CRed Light is safe for everyone.\u201D",
+      "\u201CYou can ignore your doctor.\u201D",
+      "\u201CThis replaces medication, surgery, rehabilitation or oncology treatment.\u201D",
+      "\u201CHigher pressure is always better.\u201D",
+      "\u201COur equipment is medically certified for everything we discuss.\u201D",
+      "\u201CYou will see X result by session Y.\u201D"
+    ]},
+    {type:"h2", text:"Day 2 after-delivery call", sub:"Not a sales call \u2014 a trust, safety and usage call."},
+    {type:"script", k:"Day 2 script", text:"\u201CHi [Name], it's [Salesperson] from Oxydise. I'm just checking in after delivery to make sure everything is comfortable and clear \u2014 this is not a sales call. Have you had a chance to use the equipment yet? How did the first session feel \u2014 any ear pressure, discomfort, confusion, anxiety, light sensitivity or technical issue? Based on what we discussed, the key now is consistency and tracking how you respond. I'll resend the key guide/video and log today's check-in.\u201D"},
+    {type:"h2", text:"Two-weeks-before-collection call", sub:"Confirm whether the customer will buy, extend or return. Capture feedback and keep the relationship open."},
+    {type:"script", k:"Two-week script", text:"\u201CHi [Name], it's [Salesperson] from Oxydise. Your rental is coming towards the decision point, so I wanted to check how it has gone. Looking back to when we first spoke, your main goal was [goal] \u2014 how would you describe where you are now? How often have you realistically used it? Are you leaning towards keeping it, extending, or returning? If you're considering purchase, we can talk through rent-to-buy and finance options \u2014 I'll confirm any figures in writing.\u201D"},
+    {type:"callout", k:"Founder story \u2014 when to use it", text:"Oxydise began from a real personal experience. Alan found HBOT through his own health journey, particularly severe insomnia, after trying several wellness modalities. That led to formal hyperbaric training, Cambridge Hyperbarics, and eventually Oxydise \u2014 built to make technology understandable and accessible while keeping the human side of the experience at the centre."}
+  ]
+};
+
+/* ============================ APP ============================ */
+const ALL_PAGES = [...JOURNEY, ...Object.entries(RESOURCES).map(([id,r])=>({...r,id}))];
+const GROUPS = ["Customer Journey","Business Operations","Resources"];
+let activeRole = "all";
+let current = "home";
+
+const $ = s=>document.querySelector(s);
+const el = (t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
+const esc = s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+/* ---------- Feedback storage (persists on hosted sites / file; in-memory fallback when blocked) ---------- */
+const Store = (()=>{
+  let ok=false; const mem={};
+  try{ const t="__ox_probe"; localStorage.setItem(t,t); localStorage.removeItem(t); ok=true; }catch(e){ ok=false; }
+  return {
+    persistent: ok,
+    get(k){ try{ return ok ? localStorage.getItem(k) : (k in mem?mem[k]:null); }catch(e){ return k in mem?mem[k]:null; } },
+    set(k,v){ try{ if(ok) localStorage.setItem(k,v); else mem[k]=v; }catch(e){ mem[k]=v; } }
+  };
+})();
+
+/* ---------- Content overrides (edit mode) + template notes ---------- */
+const OVR_KEY="oxydise_overrides_v1";
+const TMPL_KEY="oxydise_tmpl_v1";
+let OVR={}, TMPL={};
+function ovrLoad(){ let local={}; try{ local=JSON.parse(Store.get(OVR_KEY)||"{}"); }catch(e){} OVR=Object.assign({}, (BAKED&&BAKED.overrides)||{}, local); }
+function ovrSave(){ Store.set(OVR_KEY, JSON.stringify(OVR)); backendPush("overrides"); }
+function tmplLoad(){ let local={}; try{ local=JSON.parse(Store.get(TMPL_KEY)||"{}"); }catch(e){} TMPL=Object.assign({}, (BAKED&&BAKED.tmpl)||{}, local); }
+function tmplGet(tid){ const d=TMPL[tid]; return d? JSON.parse(JSON.stringify(d)) : {notes:"",docs:[]}; }
+function tmplSet(tid,obj){ TMPL[tid]=obj; Store.set(TMPL_KEY, JSON.stringify(TMPL)); backendPush("tmpl"); }
+function downloadText(text,name,type){ try{ const b=new Blob([text],{type:type||"text/plain"}); const u=URL.createObjectURL(b); const a=document.createElement("a"); a.href=u; a.download=name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(u); }catch(e){ toast("Download not supported here."); } }
+function normUrl(u){ return /^(https?:|mailto:|tel:|\/|#)/i.test(u) ? u : "https://"+u; }
+
+/* ----- Edit mode ----- */
+const EDIT={on:false};
+function setEditing(on){
+  EDIT.on=on;
+  document.body.classList.toggle("editing",on);
+  const bar=$("#editbar"); if(bar) bar.hidden=!on;
+  const btn=$("#editBtn"); if(btn){ btn.textContent=on?"Editing\u2026":"Edit"; btn.classList.toggle("on",on); }
+  render();
+}
+function tryEnableEditing(){
+  if(EDIT.on){ setEditing(false); toast("Edits saved on this device."); return; }
+  const pass=prompt("Enter the edit passcode to change site text:");
+  if(pass===null) return;
+  if(pass===EDIT_PASS){ setEditing(true); }
+  else toast("Incorrect passcode.");
+}
+const EDIT_SEL="h1.page-title, .lead, .promise p, .ed-h2, .section > .sub, .tbl td, ul.clean li, ul.tmpl li, .card .ct, .card .cd, .callout p, .rule-row .rk, .rule-row .rv, .feedback-q";
+function markEditable(c, pageKey){
+  // wrap trailing text of section headings so the ◈ icon is preserved
+  c.querySelectorAll(".section > h2").forEach(h2=>{
+    if(h2.querySelector(".ed-h2")) return;
+    let txt=""; h2.childNodes.forEach(n=>{ if(n.nodeType===3) txt+=n.textContent; });
+    txt=txt.replace(/\s+/g," ").trim();
+    if(!txt) return;
+    [...h2.childNodes].forEach(n=>{ if(n.nodeType===3) h2.removeChild(n); });
+    const sp=document.createElement("span"); sp.className="ed-h2"; sp.textContent=txt; h2.appendChild(sp);
+  });
+  const targets=[...c.querySelectorAll(EDIT_SEL)].filter(el=>{
+    if(el.childElementCount!==0) return false;
+    if(!el.textContent.trim()) return false;
+    if(el.closest(".fb-form, .fb-list, .reg-detail, .reg-tbl, #editbar")) return false;
+    return true;
+  });
+  targets.forEach((el,i)=>{
+    const key=pageKey+"#"+i;
+    el.dataset.edit=key;
+    if(OVR[key]!=null) el.textContent=OVR[key];
+    if(EDIT.on){
+      el.contentEditable="true";
+      el.spellcheck=true;
+      el.classList.add("editable");
+      el.addEventListener("blur",()=>{
+        const v=el.textContent.replace(/\s+\n/g,"\n").trim();
+        OVR[key]=v; ovrSave();
+      });
+      el.addEventListener("keydown",e=>{ if(e.key==="Enter" && el.tagName!=="P" && !el.classList.contains("lead")){ e.preventDefault(); el.blur(); } });
+    }
+  });
+}
+
+/* ----- Template notes & documents ----- */
+function regBadge(btn,tid){
+  const d=TMPL[tid]||{}; const dc=(d.docs||[]).length; const hn=!!(d.notes&&d.notes.trim());
+  const b=btn.querySelector(".reg-badge");
+  if(dc){ b.hidden=false; b.textContent=dc; } else b.hidden=true;
+  btn.classList.toggle("has-notes",hn||dc>0);
+}
+function regBadgeByTid(tid){ const btn=document.querySelector('.reg-toggle[data-tid="'+tid+'"]'); if(btn) regBadge(btn,tid); }
+function wireTemplateRows(c){
+  const tbl=c.querySelector(".reg-tbl"); if(!tbl) return;
+  tbl.querySelectorAll(".reg-toggle").forEach(btn=>{
+    const tid=btn.dataset.tid; regBadge(btn,tid);
+    btn.onclick=()=>{
+      const detail=tbl.querySelector('.reg-detail[data-detail="'+tid+'"]');
+      const panel=detail.querySelector(".reg-panel");
+      const opening=detail.hidden;
+      detail.hidden=!opening;
+      btn.querySelector(".rt-ic").textContent=opening?"\u2212":"\uFF0B";
+      if(opening){ renderRegPanel(panel,tid); }
+    };
+  });
+}
+function renderRegPanel(panel,tid){
+  panel.innerHTML=`
+    <div class="rp-label">Thoughts / notes</div>
+    <textarea class="rp-notes" rows="3" placeholder="Notes, questions or decisions about this template\u2026"></textarea>
+    <div class="rp-label">Documents</div>
+    <div class="rp-docs"></div>
+    <div class="rp-add">
+      <input class="rp-doc-label" placeholder="Name (e.g. Draft v2)">
+      <input class="rp-doc-url" placeholder="Paste a share link \u2014 Google Drive, Dropbox, SharePoint, URL\u2026">
+      <button class="rp-add-btn" type="button">Add document</button>
+    </div>
+    <div class="rp-help">To attach a document, upload it to your shared drive and paste the link here \u2014 then everyone sees it once you Publish from Edit mode.</div>`;
+  const notes=panel.querySelector(".rp-notes"); notes.value=(tmplGet(tid).notes)||"";
+  let nt; notes.addEventListener("input",()=>{ const x=tmplGet(tid); x.notes=notes.value; tmplSet(tid,x); clearTimeout(nt); nt=setTimeout(()=>regBadgeByTid(tid),200); });
+  function drawDocs(){
+    const docs=(tmplGet(tid).docs)||[];
+    const box=panel.querySelector(".rp-docs");
+    box.innerHTML=docs.length
+      ? docs.map((d,i)=>`<div class="rp-doc"><a class="ext" href="${esc(d.url)}" target="_blank" rel="noopener">\u{1F4CE} ${esc(d.label||d.url)}</a><button class="rp-doc-del" type="button" data-i="${i}">Remove</button></div>`).join("")
+      : `<div class="rp-empty">No documents linked yet.</div>`;
+    box.querySelectorAll(".rp-doc-del").forEach(b=>b.onclick=()=>{ const x=tmplGet(tid); (x.docs||[]).splice(+b.dataset.i,1); tmplSet(tid,x); drawDocs(); regBadgeByTid(tid); });
+  }
+  panel.querySelector(".rp-add-btn").onclick=()=>{
+    const labEl=panel.querySelector(".rp-doc-label"), urlEl=panel.querySelector(".rp-doc-url");
+    const url=urlEl.value.trim(); if(!url){ urlEl.focus(); return; }
+    const x=tmplGet(tid); x.docs=x.docs||[]; x.docs.push({label:labEl.value.trim()||url, url:normUrl(url)}); tmplSet(tid,x);
+    labEl.value=""; urlEl.value=""; drawDocs(); regBadgeByTid(tid); toast("Document linked.");
+  };
+  drawDocs();
+}
+
+/* ----- Publish / export ----- */
+async function publishSite(){
+  let src=null;
+  try{ const r=await fetch(location.href,{cache:"no-store"}); if(r.ok) src=await r.text(); }catch(e){}
+  if(!src){ exportEdits(); toast("Couldn't read the page file in this preview, so I exported your edits as JSON. On the hosted site, Publish downloads the full updated page."); return; }
+  const baked=JSON.stringify({overrides:OVR,tmpl:TMPL}).replace(/\*\//g,"*\\/");
+  const out=src.replace(/\/\*BAKED_START\*\/[\s\S]*?\/\*BAKED_END\*\//, "/*BAKED_START*/var BAKED="+baked+";/*BAKED_END*/");
+  if(out===src){ toast("Couldn't find the content marker to update."); return; }
+  downloadText(out,"oxydise-operating-system.html","text/html");
+  toast("Updated site downloaded. Replace your hosted file with it to publish for everyone.");
+}
+function exportEdits(){ downloadText(JSON.stringify({overrides:OVR,tmpl:TMPL},null,2),"oxydise-content.json","application/json"); }
+function importEdits(file){
+  const rd=new FileReader();
+  rd.onload=()=>{ try{ const d=JSON.parse(rd.result); if(d.overrides){ OVR=Object.assign({},OVR,d.overrides); ovrSave(); } if(d.tmpl){ TMPL=Object.assign({},TMPL,d.tmpl); Store.set(TMPL_KEY,JSON.stringify(TMPL)); backendPush("tmpl"); } toast("Edits imported."); render(); }catch(e){ toast("That file wasn't valid edits JSON."); } };
+  rd.readAsText(file);
+}
+function discardLocal(){
+  const shared = Net.enabled;
+  if(!confirm(shared ? "Reload the shared content from the server, dropping any unsynced local changes?" : "Discard edits made in this browser? Published text stays; only unsaved local changes are removed.")) return;
+  Store.set(OVR_KEY,"{}"); Store.set(TMPL_KEY,"{}"); ovrLoad(); tmplLoad();
+  if(shared){ backendHydrate().then(()=>render()); toast("Reloaded from the server."); }
+  else { render(); toast("Local edits discarded."); }
+}
+
+const FB_KEY="oxydise_feedback_v1";
+function fbAll(){ try{ return JSON.parse(Store.get(FB_KEY)||"[]"); }catch(e){ return []; } }
+function fbSaveAll(list){ Store.set(FB_KEY, JSON.stringify(list)); backendPush("feedback"); }
+function fbAdd(rec){ const list=fbAll(); list.unshift(rec); fbSaveAll(list); }
+function fbForPage(pid){ return fbAll().filter(x=>x.pageId===pid); }
+function fbDelete(id){ fbSaveAll(fbAll().filter(x=>x.id!==id)); }
+function fbClear(){ fbSaveAll([]); }
+function fbId(){ return "f"+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function fmtTime(ts){ try{ return new Date(ts).toLocaleString([], {dateStyle:"medium", timeStyle:"short"}); }catch(e){ return ""; } }
+function toast(t){ let n=document.querySelector(".toast"); if(!n){ n=document.createElement("div"); n.className="toast"; document.body.appendChild(n); } n.textContent=t; n.classList.add("show"); clearTimeout(n._t); n._t=setTimeout(()=>n.classList.remove("show"),2300); }
+
+function feedbackForm(pageId, pageTitle, showList){
+  showList = showList!==false;
+  return `<div class="fb-form" data-page="${esc(pageId)}" data-title="${esc(pageTitle)}">
+    <textarea class="fb-text" rows="3" placeholder="Your idea for improving this page\u2026 (what could be clearer, missing, or better?)"></textarea>
+    <div class="fb-row">
+      <input class="fb-name" type="text" placeholder="Your name (optional)">
+      <button class="fb-submit" type="button">Submit idea</button>
+    </div>
+    <div class="fb-msg" hidden></div>
+    ${showList?`<div class="fb-list"></div>`:""}
+  </div>`;
+}
+function fbItemHTML(it, withPage){
+  return `<div class="fb-item">
+    <div class="fb-item-top"><span class="fb-who">${esc(it.name||"Anonymous")}</span><span class="fb-when">${esc(fmtTime(it.ts))}</span>${withPage?`<span class="fb-pin">${esc(it.pageTitle||"")}</span>`:""}</div>
+    <div class="fb-body">${esc(it.text)}</div>
+    <button class="fb-del" data-del="${esc(it.id)}" title="Remove this idea">Remove</button>
+  </div>`;
+}
+function wireFeedback(c){
+  // per-page submission forms
+  c.querySelectorAll(".fb-form").forEach(form=>{
+    const pageId=form.dataset.page, pageTitle=form.dataset.title;
+    const ta=form.querySelector(".fb-text"), nm=form.querySelector(".fb-name");
+    const btn=form.querySelector(".fb-submit"), msg=form.querySelector(".fb-msg");
+    const listBox=form.querySelector(".fb-list");
+    function renderList(){
+      if(!listBox) return;
+      const items=fbForPage(pageId);
+      listBox.innerHTML = items.length
+        ? `<div class="fb-list-h">Ideas submitted for this page (${items.length})</div>`+items.map(it=>fbItemHTML(it,false)).join("")
+        : "";
+      listBox.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ fbDelete(b.dataset.del); renderList(); refreshBoard(); });
+    }
+    function submit(){
+      const text=ta.value.trim(); if(!text){ ta.focus(); return; }
+      fbAdd({id:fbId(), pageId, pageTitle, text, name:(nm.value.trim()||"Anonymous"), role:activeRole, ts:Date.now()});
+      ta.value=""; nm.value="";
+      msg.hidden=false;
+      msg.textContent = Store.persistent
+        ? "Thanks \u2014 your idea was saved to the improvement board."
+        : "Thanks \u2014 saved for this session. (Saving across reloads is blocked in this preview; it will persist on the hosted site.)";
+      clearTimeout(form._mt); form._mt=setTimeout(()=>{msg.hidden=true;},6000);
+      renderList(); refreshBoard();
+    }
+    btn.onclick=submit;
+    ta.addEventListener("keydown",e=>{ if((e.metaKey||e.ctrlKey)&&e.key==="Enter") submit(); });
+    renderList();
+  });
+  // live board (feedback page)
+  refreshBoard();
+  const tb=c.querySelector(".fb-toolbar");
+  if(tb){
+    const b = sel => tb.querySelector(sel);
+    if(b("[data-email]")) b("[data-email]").onclick=fbEmailAll;
+    if(b("[data-copy]"))  b("[data-copy]").onclick=fbCopyAll;
+    if(b("[data-csv]"))   b("[data-csv]").onclick=fbDownloadCsv;
+    if(b("[data-clear]")) b("[data-clear]").onclick=()=>{ if(fbAll().length && confirm("Clear all submitted ideas? This cannot be undone.")){ fbClear(); render(); } };
+  }
+}
+function refreshBoard(){
+  const box=document.getElementById("fb-board"); if(!box) return;
+  const all=fbAll();
+  const cnt=document.querySelector(".fb-count"); if(cnt) cnt.textContent=all.length;
+  const cs=document.querySelector(".fb-count-s"); if(cs) cs.textContent=all.length===1?"":"s";
+  if(!all.length){ box.innerHTML=`<p class="fb-empty">No ideas yet. Use the box above, or the feedback box at the bottom of any page, to add the first one.</p>`; return; }
+  const order=[], groups={};
+  all.forEach(it=>{ const t=it.pageTitle||"General"; if(!groups[t]){ groups[t]=[]; order.push(t); } groups[t].push(it); });
+  box.innerHTML=order.map(t=>`<div class="fb-group"><div class="fb-group-h">${esc(t)} <span class="fb-badge">${groups[t].length}</span></div>${groups[t].map(it=>fbItemHTML(it,false)).join("")}</div>`).join("");
+  box.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ fbDelete(b.dataset.del); render(); });
+}
+function fbEmailAll(){
+  const all=fbAll(); if(!all.length){ toast("No ideas to send yet."); return; }
+  const body=all.map(it=>`Page: ${it.pageTitle}\nFrom: ${it.name||"Anonymous"}\nWhen: ${fmtTime(it.ts)}\nIdea: ${it.text}`).join("\n\n----------------------------\n\n");
+  const subject=`Oxydise website feedback \u2014 ${all.length} idea${all.length>1?"s":""}`;
+  try{ window.location.href="mailto:?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body); }
+  catch(e){ toast("Could not open email client."); }
+}
+function fbCopyAll(){
+  const all=fbAll(); if(!all.length){ toast("No ideas to copy yet."); return; }
+  const text=all.map(it=>`[${it.pageTitle}] ${it.name||"Anonymous"} (${fmtTime(it.ts)}): ${it.text}`).join("\n");
+  const done=()=>toast("Copied "+all.length+" idea"+(all.length>1?"s":"")+" to clipboard");
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(done).catch(()=>fallbackCopy(text,done)); }
+  else fallbackCopy(text,done);
+}
+function fallbackCopy(text,done){
+  const ta=document.createElement("textarea"); ta.value=text; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select();
+  try{ document.execCommand("copy"); done(); }catch(e){ toast("Copy not supported here."); } ta.remove();
+}
+function fbDownloadCsv(){
+  const all=fbAll(); if(!all.length){ toast("No ideas to export yet."); return; }
+  const q=s=>'"'+String(s==null?"":s).replace(/"/g,'""')+'"';
+  const rows=[["Page","Name","When","Viewing as","Idea"]].concat(all.map(it=>[it.pageTitle,it.name||"Anonymous",fmtTime(it.ts),it.role||"all",it.text]));
+  const csv="\uFEFF"+rows.map(r=>r.map(q).join(",")).join("\r\n");
+  try{
+    const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}); const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download="oxydise-feedback.csv"; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    toast("Downloaded oxydise-feedback.csv");
+  }catch(e){ toast("Download not supported here."); }
+}
+
+/* ---------- Build sidebar nav ---------- */
+function buildNav(){
+  const nav = $("#nav"); nav.innerHTML="";
+  // overview
+  const og = el("div","nav-group");
+  og.appendChild(el("span","nav-label","Start"));
+  const home = el("div","nav-link","<span class='nx'>\u25C8</span><span>Overview</span>");
+  home.dataset.id="home"; home.onclick=()=>go("home"); og.appendChild(home);
+  nav.appendChild(og);
+
+  GROUPS.forEach(g=>{
+    const pages = ALL_PAGES.filter(p=>p.group===g).sort((a,b)=>a.num-b.num);
+    if(!pages.length) return;
+    const grp = el("div","nav-group");
+    grp.appendChild(el("span","nav-label",g));
+    pages.forEach(p=>{
+      const link = el("div","nav-link");
+      link.dataset.id=p.id;
+      link.innerHTML=`<span class='nx'>${p.num}</span><span>${esc(p.title)}</span><span class='dot'></span>`;
+      link.onclick=()=>go(p.id);
+      grp.appendChild(link);
+    });
+    nav.appendChild(grp);
+  });
+}
+
+/* ---------- Person filter chips ---------- */
+function buildFilters(){
+  const f = $("#filters"); f.innerHTML="";
+  ROLES.forEach(r=>{
+    const c = el("button","chip"+(r.key===activeRole?" on":""),esc(r.label));
+    c.onclick=()=>{activeRole=r.key; buildFilters(); applyRole(); render();};
+    f.appendChild(c);
+  });
+}
+
+/* page contains tasks for the active role? */
+function pageHasRole(p,role){
+  if(role==="all") return true;
+  const check = arr => (arr||[]).some(row=>ownerRoles(row[1]||row[0]).includes(role));
+  return check(p.mustDo) || check(p.owners);
+}
+function applyRole(){
+  document.querySelectorAll(".nav-link").forEach(l=>{
+    l.classList.remove("dim","has-role");
+    const id=l.dataset.id; if(id==="home")return;
+    const p=ALL_PAGES.find(x=>x.id===id); if(!p)return;
+    if(activeRole!=="all"){
+      if(pageHasRole(p,activeRole)) l.classList.add("has-role");
+      else l.classList.add("dim");
+    }
+  });
+}
+
+/* ---------- Renderers ---------- */
+function roleBanner(){
+  if(activeRole==="all") return "";
+  const r = ROLES.find(x=>x.key===activeRole);
+  const focus = ROLE_FOCUS[activeRole]||"";
+  return `<div class="role-banner show"><span>Viewing as <b>${esc(r.label)}</b> \u2014 ${esc(focus)}</span>
+    <button class="clear" onclick="activeRole='all';buildFilters();applyRole();render()">Show all \u00d7</button></div>`;
+}
+
+function tableHTML(head, rows, rowTagger){
+  let h = `<table class="tbl"><thead><tr>${head.map(x=>`<th>${esc(x)}</th>`).join("")}</tr></thead><tbody>`;
+  rows.forEach(r=>{
+    const cls = rowTagger? rowTagger(r):"";
+    h += `<tr class="${cls}">${r.map(c=>`<td>${c}</td>`).join("")}</tr>`;
+  });
+  return h+"</tbody></table>";
+}
+
+function renderHome(){
+  const c=$("#content");
+  let h = `<div class="page-head fade">
+    <div class="eyebrow">${esc(HOME.eyebrow)}</div>
+    <h1 class="page-title">${esc(HOME.title)}</h1>
+    <p class="lead">${esc(HOME.lead)}</p>
+    ${roleBanner()}
+  </div>`;
+  h += `<div class="section fade"><div class="home-grid">${HOME.metrics.map(m=>`<div class="metric"><div class="mn">${m.n}</div><div class="ml">${esc(m.l)}</div></div>`).join("")}</div></div>`;
+  h += `<div class="section fade"><h2><span class="ico">\u25C8</span>Core rules</h2><ul class="clean">${HOME.coreRules.map(r=>`<li>${esc(r)}</li>`).join("")}</ul></div>`;
+  h += `<div class="section fade"><h2><span class="ico">\u25C8</span>Global operating rules</h2><div>${HOME.globalRules.map(r=>`<div class="rule-row"><div class="rk">${esc(r[0])}</div><div class="rv">${esc(r[1])}</div></div>`).join("")}</div></div>`;
+  h += `<div class="section fade"><h2><span class="ico">\u25C8</span>Every page uses the same layout</h2><p class="sub">A page answers the same nine questions, so the team always knows where to look.</p>${tableHTML(["Section","Question it answers"],HOME.layoutQs.map(r=>[esc(r[0]),esc(r[1])]))}</div>`;
+  h += `<div class="section fade"><h2><span class="ico">\u25C8</span>Final principle</h2><p class="sub">Do not make the system big for the sake of it. Every page answers six questions:</p><ul class="clean">${HOME.principle.map(p=>`<li>${esc(p)}</li>`).join("")}</ul></div>`;
+  h += `<div class="foot">Oxydise Customer Operating System \u00b7 Team review draft \u2014 customer journey, operations and resources. Compiled with the Sales Call Bible, the Oxydise Education Knowledge Base and the Template Library & Brochure Register. Internal use only \u2014 not medical advice, not final approved customer claims.</div>`;
+  c.innerHTML=h;
+}
+
+function renderJourney(p){
+  const c=$("#content");
+  const roleHit = row => activeRole!=="all" && ownerRoles(row[1]||row[0]).includes(activeRole) ? "role-hit" : (activeRole!=="all"?"row-dim":"");
+  let h = `<div class="page-head fade">
+    <div class="eyebrow">${esc(p.group)} \u00b7 Stage ${p.num}</div>
+    <h1 class="page-title">${esc(p.title)}</h1>
+    ${roleBanner()}
+  </div>`;
+
+  // promise
+  if(p.promise){
+    h+=`<div class="promise fade"><div class="k">Customer promise</div>${p.promise.map(x=>`<p>${esc(x)}</p>`).join("")}</div>`;
+  }
+  // owner
+  if(p.owners){
+    h+=`<div class="section fade"><h2><span class="ico">\u25C8</span>Owner</h2>${tableHTML(["Role","Responsibility"],p.owners.map(o=>[esc(o[0]),esc(o[1])]),roleHit)}</div>`;
+  }
+  // must do
+  if(p.mustDo){
+    h+=`<div class="section fade"><h2><span class="ico">\u25C8</span>Must do</h2>${tableHTML(["Action","Owner"],p.mustDo.map(m=>[esc(m[0]),`<span class="role-pill">${esc(m[1])}</span>`]))}</div>`;
+  }
+  // categories (general enquiry)
+  if(p.categories){
+    h+=`<div class="section fade"><h2><span class="ico">\u25C8</span>General-enquiry categories</h2>${tableHTML(["Category","Meaning"],p.categories.map(x=>[esc(x[0]),esc(x[1])]))}</div>`;
+  }
+  // statuses (stock)
+  if(p.statuses){
+    h+=`<div class="section fade"><h2><span class="ico">\u25C8</span>Stock statuses</h2><ul class="tmpl">${p.statuses.map(s=>`<li>${esc(s)}</li>`).join("")}</ul></div>`;
+  }
+  // best practice
+  if(p.bestPractice){
+    h+=`<div class="section fade"><h2><span class="ico">\u25C8</span>Best practice</h2>${p.bestPractice.map(x=>`<p class="sub" style="max-width:68ch">${esc(x)}</p>`).join("")}`;
+    if(p.callout){
+      const link = p.callout[2]?` <a class="ext" onclick="go('${p.callout[2]}')">Open \u2192</a>`:"";
+      h+=`<div class="callout"><div class="ck">${esc(p.callout[0])}</div><p>${esc(p.callout[1])}${link}</p></div>`;
+    }
+    h+=`</div>`;
+  } else if(p.callout){
+    const link = p.callout[2]?` <a class="ext" onclick="go('${p.callout[2]}')">Open \u2192</a>`:"";
+    h+=`<div class="section fade"><div class="callout"><div class="ck">${esc(p.callout[0])}</div><p>${esc(p.callout[1])}${link}</p></div></div>`;
+  }
+  // if it goes wrong
+  if(p.ifWrong){
+    h+=`<div class="section fade"><h2><span class="ico">\u25C8</span>If it goes wrong</h2>${tableHTML(["Situation","Fix"],p.ifWrong.map(x=>[esc(x[0]),esc(x[1])]))}</div>`;
+  }
+  // crm
+  if(p.crm){
+    h+=`<div class="section fade"><h2><span class="ico">\u25C8</span>CRM / stock update</h2>${tableHTML(["Field","Required"],p.crm.map(x=>[esc(x[0]),esc(x[1])]))}</div>`;
+  }
+  // templates
+  if(p.templates){
+    h+=`<div class="section fade"><h2><span class="ico">\u25C8</span>Templates</h2><p class="sub">From the <a class="ext" onclick="go('templates')">Template Library</a>.</p><ul class="tmpl">${p.templates.map(t=>`<li>${esc(t)}</li>`).join("")}</ul></div>`;
+  }
+  // feedback
+  h+=`<div class="section fade"><h2><span class="ico">\u25C8</span>Website feedback</h2><p class="sub">Prompts to capture for the <a class="ext" onclick="go('feedback')">improvement board</a> \u2014 or add your own idea for this page below.</p>${(p.feedback||[]).map(q=>`<div class="feedback-q">${esc(q)}</div>`).join("")}${feedbackForm(p.id,p.title)}</div>`;
+  c.innerHTML=h;
+  tagMustDo(c,p);
+  wireFeedback(c);
+}
+
+/* tag must-do + owner rows for active role after render */
+function tagMustDo(c,p){
+  if(activeRole==="all") return;
+  // owner table is first .tbl if owners present
+  const tables = c.querySelectorAll(".section .tbl");
+  // find tables by preceding h2 text
+  c.querySelectorAll(".section").forEach(sec=>{
+    const h2 = sec.querySelector("h2"); if(!h2) return;
+    const t = h2.textContent.trim();
+    const tbl = sec.querySelector(".tbl"); if(!tbl) return;
+    let src=null;
+    if(t==="Owner") src=p.owners;
+    else if(t==="Must do") src=p.mustDo;
+    else return;
+    const trs = tbl.querySelectorAll("tbody tr");
+    trs.forEach((tr,i)=>{
+      const row=src[i]; if(!row)return;
+      const ownerText = t==="Owner"? row[1] : row[1];
+      if(ownerRoles(ownerText).includes(activeRole)) tr.classList.add("role-hit");
+      else tr.classList.add("row-dim");
+    });
+  });
+}
+
+/* ---------- Resource page blocks ---------- */
+function renderResource(p){
+  const c=$("#content");
+  let h = `<div class="page-head fade">
+    <div class="eyebrow">${esc(p.eyebrow||p.group)}</div>
+    <h1 class="page-title">${esc(p.title)}</h1>
+    ${p.lead?`<p class="lead">${esc(p.lead)}</p>`:""}
+  </div>`;
+  (p.blocks||[]).forEach(b=>{ h+=blockHTML(b); });
+  if(p.id!=="feedback"){
+    h+=`<div class="section fade"><h2><span class="ico">\u25C8</span>Suggest an improvement</h2><p class="sub">Spotted something on this page that could be better? Add it to the <a class="ext" onclick="go('feedback')">improvement board</a>.</p>${feedbackForm(p.id,p.title)}</div>`;
+  }
+  c.innerHTML=h;
+  wireSearch(c);
+  wireFeedback(c);
+}
+
+function blockHTML(b){
+  switch(b.type){
+    case "h2":
+      return `<div class="section fade"><h2><span class="ico">\u25C8</span>${esc(b.text)}</h2>${b.sub?`<p class="sub">${esc(b.sub)}</p>`:""}</div>`;
+    case "prose":
+      return `<div class="section fade">${b.text.map(t=>`<p class="sub" style="max-width:68ch">${esc(t)}</p>`).join("")}</div>`;
+    case "table":
+      return `<div class="section fade">${tableHTML(b.head,b.rows.map(r=>r.map(esc)))}</div>`;
+    case "linktable":
+      return `<div class="section fade">${tableHTML(b.head,b.rows.map(r=>[esc(r[0]),esc(r[1]),`<a class="ext" href="${esc(r[2])}" target="_blank" rel="noopener">Open \u2192</a>`]))}</div>`;
+    case "cards":
+      return `<div class="section fade"><div class="cards">${b.items.map(i=>`<div class="card"><div class="ct">${esc(i.t)}</div><div class="cd">${esc(i.d)}</div></div>`).join("")}</div></div>`;
+    case "list":
+      return `<div class="section fade"><ul class="clean">${b.items.map(i=>`<li>${esc(i)}</li>`).join("")}</ul></div>`;
+    case "tmpl":
+      return `<div class="section fade"><ul class="tmpl">${b.items.map(i=>`<li>${esc(i)}</li>`).join("")}</ul></div>`;
+    case "rules":
+      return `<div class="section fade">${b.title?`<h2><span class="ico">\u25C8</span>${esc(b.title)}</h2>`:""}<div>${b.items.map(r=>`<div class="rule-row"><div class="rk">${esc(r[0])}</div><div class="rv">${esc(r[1])}</div></div>`).join("")}</div></div>`;
+    case "callout":
+      return `<div class="section fade"><div class="callout"><div class="ck">${esc(b.k)}</div><p>${esc(b.text)}</p></div></div>`;
+    case "script":
+      return `<div class="section fade"><div class="callout script"><div class="ck">${esc(b.k)}</div><p>${esc(b.text)}</p></div></div>`;
+    case "dodont":
+      return `<div class="section fade">${tableHTML(["Safe wording","Unsafe wording"],b.rows.map(r=>r.map(esc)),()=>"")}</div>`;
+    case "orderlist":
+      return `<div class="section fade"><div>${b.items.map((r,i)=>`<div class="rule-row"><div class="rk"><span style="color:var(--primary);font-variant-numeric:tabular-nums">${i+1}.</span> ${esc(r[0])}</div><div class="rv">${esc(r[1])}</div></div>`).join("")}</div></div>`;
+    case "priority-key":
+      return `<div class="section fade"><div class="cards">
+        <div class="card"><div class="ct"><span class="tag p1">P1</span> Build first</div><div class="cd">Required to run the customer journey safely and consistently now.</div></div>
+        <div class="card"><div class="ct"><span class="tag p2">P2</span> Build next</div><div class="cd">Important for better conversion, education, aftercare or marketing rhythm.</div></div>
+        <div class="card"><div class="ct"><span class="tag p3">P3</span> Later / improve</div><div class="cd">Useful, but not essential before the first version goes live.</div></div>
+      </div></div>`;
+    case "search":
+      return `<div class="section fade"><input class="search" placeholder="${esc(b.placeholder)}" data-target="${b.target}"></div>`;
+    case "register":{
+      const body = b.rows.map(r=>{
+        const pri = r[5]; const tid = r[0];
+        const cells = r.map((cell,idx)=> idx===5 ? `<td><span class="tag ${pri.toLowerCase()}">${esc(pri)}</span></td>` : `<td>${esc(cell)}</td>`).join("");
+        return `<tr class="reg-row" data-tid="${esc(tid)}" data-search="${esc((r[0]+" "+r[1]+" "+r[2]+" "+r[3]).toLowerCase())}">${cells}<td class="reg-note-cell"><button class="reg-toggle" type="button" data-tid="${esc(tid)}" title="Notes & documents"><span class="rt-ic">\uFF0B</span><span class="reg-badge" hidden></span></button></td></tr><tr class="reg-detail" data-detail="${esc(tid)}" hidden><td colspan="${b.head.length+1}"><div class="reg-panel"></div></td></tr>`;
+      }).join("");
+      return `<div class="section fade"><table class="tbl reg-tbl" id="${b.id}"><thead><tr>${b.head.map(x=>`<th>${esc(x)}</th>`).join("")}<th title="Notes &amp; documents">\u270E</th></tr></thead><tbody>${body}</tbody></table></div>`;
+    }
+    case "feedback":
+      return `<div class="section fade">${b.items.map(q=>`<div class="feedback-q">${esc(q)}</div>`).join("")}</div>`;
+    case "fb-board":
+      return `<div class="section fade">
+        <h2><span class="ico">\u25C8</span>Live improvement board <span class="fb-count-wrap">(<span class="fb-count">0</span> idea<span class="fb-count-s"></span>)</span></h2>
+        <p class="sub">Every idea submitted from any page appears here. Add a general idea for the whole site below.</p>
+        ${feedbackForm("general","General / whole site", false)}
+        <div class="fb-toolbar">
+          <button class="fb-tb" type="button" data-email>Email all to team</button>
+          <button class="fb-tb" type="button" data-copy>Copy all</button>
+          <button class="fb-tb" type="button" data-csv>Download CSV</button>
+          <button class="fb-tb danger" type="button" data-clear>Clear all</button>
+        </div>
+        <p class="fb-note">Ideas are stored in this browser. Use <b>Email all to team</b> or <b>Download CSV</b> to share them \u2014 a shared inbox or form backend can be wired in later for true team-wide collection.</p>
+        <div id="fb-board"></div>
+      </div>`;
+    default: return "";
+  }
+}
+
+function wireSearch(c){
+  const inp = c.querySelector(".search"); if(!inp) return;
+  inp.addEventListener("input",()=>{
+    const q = inp.value.trim().toLowerCase();
+    const tbl = document.getElementById(inp.dataset.target); if(!tbl)return;
+    tbl.querySelectorAll("tbody tr").forEach(tr=>{
+      if(tr.classList.contains("reg-detail")){ tr.hidden=true; const prev=tr.previousElementSibling; if(prev){ const ic=prev.querySelector(".rt-ic"); if(ic) ic.textContent="\uFF0B"; } return; }
+      if(tr.dataset.search==null) return;
+      tr.style.display = !q || tr.dataset.search.includes(q) ? "" : "none";
+    });
+  });
+}
+
+/* ---------- Routing ---------- */
+function go(id){
+  current=id;
+  // Update the URL hash for bookmarking, but never let a blocked History API
+  // (sandboxed iframe / strict file:// origins) stop navigation from rendering.
+  try { if(history && history.replaceState) history.replaceState(null,"","#"+id); }
+  catch(e){ try { location.hash = id; } catch(_){} }
+  document.querySelectorAll(".nav-link").forEach(l=>l.classList.toggle("active",l.dataset.id===id));
+  $("#sidebar").classList.remove("open"); $("#scrim").classList.remove("show");
+  render();
+  try { window.scrollTo({top:0,behavior:"instant"}); } catch(e){ window.scrollTo(0,0); }
+}
+function render(){
+  if(current==="home"){ renderHome(); }
+  else {
+    const p = ALL_PAGES.find(x=>x.id===current);
+    if(!p){ current="home"; renderHome(); }
+    else if(p.blocks) renderResource(p);
+    else renderJourney(p);
+  }
+  afterRender();
+}
+function afterRender(){
+  const c=$("#content");
+  wireTemplateRows(c);
+  markEditable(c, current);
+}
+
+/* ---------- Theme ---------- */
+function initTheme(){
+  const saved = "light";
+  document.documentElement.setAttribute("data-theme",saved);
+  $("#themeBtn").onclick=()=>{
+    const cur=document.documentElement.getAttribute("data-theme");
+    document.documentElement.setAttribute("data-theme",cur==="dark"?"light":"dark");
+  };
+}
+
+/* ---------- Init ---------- */
+ovrLoad(); tmplLoad();
+buildNav(); buildFilters(); initTheme();
+$("#menuToggle").onclick=()=>{$("#sidebar").classList.toggle("open");$("#scrim").classList.toggle("show");};
+$("#scrim").onclick=()=>{$("#sidebar").classList.remove("open");$("#scrim").classList.remove("show");};
+$("#editBtn").onclick=tryEnableEditing;
+(function(){
+  const bar=$("#editbar"); if(!bar) return;
+  bar.querySelector("[data-done]").onclick=()=>{ setEditing(false); toast("Edits saved on this device."); };
+  bar.querySelector("[data-publish]").onclick=publishSite;
+  bar.querySelector("[data-export]").onclick=exportEdits;
+  bar.querySelector("[data-discard]").onclick=discardLocal;
+  const imp=$("#importFile");
+  bar.querySelector("[data-import]").onclick=()=>imp.click();
+  imp.onchange=()=>{ if(imp.files[0]) importEdits(imp.files[0]); imp.value=""; };
+})();
+const hash=location.hash.replace("#","");
+current = (hash && (hash==="home"||ALL_PAGES.find(p=>p.id===hash)))?hash:"home";
+applyRole();
+go(current);
+/* shared backend: render local instantly, then refresh from server + keep in sync */
+if(Net.enabled){ setSyncDot(""); backendHydrate().then(ok=>{ if(ok) render(); }); backendPoll(); }
+
+</script>
+</body>
+</html>
